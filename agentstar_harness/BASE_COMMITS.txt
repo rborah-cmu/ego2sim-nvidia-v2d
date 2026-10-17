@@ -1,0 +1,3 @@
+7e6f4a7 sweep_batch: pass the absolute run dir to the inner bookkept run
+c150631 sweep_batch: resolve named constants in FRAMES, check before sweeping; contract_check: name best pass on budget exhaustion
+branch ego2sim-shape of https://github.com/makezur/agenticSTAR
