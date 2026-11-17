@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Simsons</title>
+  <meta name="description" content="The Simsons: turning egocentric human video into simulation-ready robot learning data. Our entry to the NVIDIA Video-to-Data Challenge 2026, Track 3.">
+  <link rel="stylesheet" href="assets/style.css">
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">The Simsons</a>
+    <nav class="site" aria-label="Sections">
+      <a href="#v2d-2026">NVIDIA V2D Challenge</a>
+      <a href="https://github.com/the-simsons/ego2sim-nvidia-v2d">Code</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Home -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>From human video<br>to robot learning.</h1>
+      <!-- EDIT: one or two sentences about the team, its members and affiliation. -->
+      <p class="lede">We are The Simsons. We turn egocentric videos of people handling everyday objects into
+        simulation-ready data: object meshes, object and hand motion, and robot policies trained on them.</p>
+      <p class="note">This page collects our projects. First up: our entry to the NVIDIA Video-to-Data Challenge 2026.</p>
+    </div>
+  </section>
+
+  <!-- NVIDIA V2D Challenge 2026 -->
+  <section class="block" id="v2d-2026">
+    <div class="wrap">
+      <p class="eyebrow">NVIDIA Video-to-Data Challenge 2026 · Track 3</p>
+      <h2>Ego2Sim: egocentric video to simulated manipulation</h2>
+
+      <div class="cols">
+        <div>
+          <p>Track 3 gives a short egocentric video of a person manipulating one or two objects, recorded with a
+            three-camera head rig. From the video alone, we reconstruct each object's mesh, its 6-DoF trajectory and
+            the person's hand motion, retarget the hands to floating Sharpa Wave robot hands, and train one
+            reinforcement-learning policy per episode in simulation (FlashSAC in FlashCHORD).</p>
+          <p class="muted">The score is how closely the objects moved by the policy follow the person's original object
+            motion (ADD-AUC), measured with the challenge's official evaluator on 20 evaluation episodes.</p>
+        </div>
+        <figure class="frame">
+          <img src="assets/img/episodes_grid.jpg" alt="Nine Track 3 episodes from the head camera: a person moving pots, cups, a dust pan, a watering can and other objects on a round table." loading="lazy">
+          <figcaption>Nine Track 3 tasks, seen from the head camera.</figcaption>
+        </figure>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="num">0.651</div><div class="lbl">ADD-AUC, final submission</div></div>
+        <div class="stat"><div class="num">20</div><div class="lbl">evaluation episodes, one policy each</div></div>
+        <div class="stat"><div class="num">96.8M</div><div class="lbl">simulation steps per policy</div></div>
+        <div class="stat"><div class="num">+0.042</div><div class="lbl">AUC from three per-episode fixes in the final day</div></div>
+      </div>
+
+      <h3>The pipeline</h3>
+      <p class="muted">Every stage runs from the egocentric video. Upstream code is the challenge's pinned
+        <a href="https://github.com/nvidia-isaac/video_to_data">video_to_data</a>; our stages wrap or replace parts of it.</p>
+      <ol class="pipeline">
+        <li><b>Stereo depth</b><span>SGBM on the undistorted head cameras; FoundationStereo depth for object tracking.</span></li>
+        <li><b>Segmentation</b><span>SAM 2 masks for every object and hand, prompted from object detections and WiLoR hands.</span></li>
+        <li><b>Depth fusion &amp; camera motion</b><span>MoGe depth fused with stereo; stereo visual odometry for the head.</span></li>
+        <li><b>Hands</b><span>3D MANO hands per frame, repaired, with occluded grasps carried along with the object.</span></li>
+        <li><b>Object meshes</b><span>AgentSTAR: a Claude agent models each object from primitives in Blender, checked against the video; best mesh per object.</span></li>
+        <li><b>6-DoF object tracking</b><span>FoundationPose on FoundationStereo depth with 16 pose hypotheses and a static start.</span></li>
+        <li><b>Simulation reference</b><span>Hands retargeted to floating Sharpa Wave hands, a table support, all objects in one scene.</span></li>
+        <li><b>Reference cleaning</b><span>Symmetric spins removed, look-alike flips unwrapped, physics settle, overlapping objects pushed apart.</span></li>
+        <li><b>Policies</b><span>One FlashSAC policy per episode, best checkpoint by ADD-AUC over 64 simulated worlds.</span></li>
+      </ol>
+
+      <h3>Reconstructed objects</h3>
+      <p class="muted">Meshes built by our AgentSTAR harness, at metric scale, as used in simulation. Click one to rotate it in 3D.</p>
+      <div class="meshes">
+        <div class="mesh"><model-viewer src="assets/meshes/white_pot.glb" poster="assets/img/meshes/white_pot.png" alt="White pot mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/white_pot.png" alt="" class="mesh-poster"></model-viewer><div class="name">White pot</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/water_pitcher.glb" poster="assets/img/meshes/water_pitcher.png" alt="Watering can mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/water_pitcher.png" alt="" class="mesh-poster"></model-viewer><div class="name">Watering can</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_dust_pan.glb" poster="assets/img/meshes/mini_dust_pan.png" alt="Dust pan mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/mini_dust_pan.png" alt="" class="mesh-poster"></model-viewer><div class="name">Dust pan</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_sweeper.glb" poster="assets/img/meshes/mini_sweeper.png" alt="Hand brush mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/mini_sweeper.png" alt="" class="mesh-poster"></model-viewer><div class="name">Hand brush</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/blue_cup.glb" poster="assets/img/meshes/blue_cup.png" alt="Blue cup mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/blue_cup.png" alt="" class="mesh-poster"></model-viewer><div class="name">Blue cup</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/wooden_spoon.glb" poster="assets/img/meshes/wooden_spoon.png" alt="Wooden spoon mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/wooden_spoon.png" alt="" class="mesh-poster"></model-viewer><div class="name">Wooden spoon</div></div>
+      </div>
+
+      <h3>Hand tracking</h3>
+      <div class="cols">
+        <div>
+          <p>The upstream hand stage gets hand shape right but places hands about 26&nbsp;cm too far from the camera,
+            because its depth comes from a single image. Our multi-view hand tracker builds on HaWoR, moves each hand
+            onto keypoints triangulated from two head cameras (stereo depth where there are none) and falls back to a
+            per-frame HaMeR hand wherever HaWoR's hand disagrees with the image.</p>
+          <p class="muted">Measured on the 20 public Track 3 episodes against a reference triangulated from all three
+            head cameras; the second chart uses a camera the methods do not see.</p>
+        </div>
+        <figure class="frame">
+          <video src="assets/hands_multiview.mp4" controls muted loop playsinline preload="metadata"
+                 aria-label="Head-camera video with the tracked hand meshes drawn on the person's hands"></video>
+          <figcaption>Multi-view hand tracking on one episode. Green: frames where the HaMeR fallback took over.</figcaption>
+        </figure>
+      </div>
+
+      <div class="charts">
+        <div class="chart" role="img" aria-label="3D hand joint error by method, in millimetres; lower is better. Our multi-view tracker: 47.5 mm; V2D baseline: 263.4 mm.">
+          <h4>3D joint error</h4>
+          <div class="sub">mm, lower is better</div>
+          <div class="bar-row" title="V2D baseline (HaMeR + MoGe depth): 263.4 mm"><span class="lbl">V2D baseline</span><div class="bar-track"><div class="bar" style="width:100%"></div><span class="bar-val" style="left:auto;right:6px">263.4</span></div></div>
+          <div class="bar-row" title="HaWoR: 121.1 mm"><span class="lbl">HaWoR</span><div class="bar-track"><div class="bar" style="width:46%"></div><span class="bar-val" style="left:46%">121.1</span></div></div>
+          <div class="bar-row" title="EgoFound3R: 119.2 mm"><span class="lbl">EgoFound3R</span><div class="bar-track"><div class="bar" style="width:45.3%"></div><span class="bar-val" style="left:45.3%">119.2</span></div></div>
+          <div class="bar-row" title="HaWoR + stereo depth: 53.2 mm"><span class="lbl">HaWoR + stereo</span><div class="bar-track"><div class="bar" style="width:20.2%"></div><span class="bar-val" style="left:20.2%">53.2</span></div></div>
+          <div class="bar-row" title="HaMeR + stereo depth: 49.5 mm"><span class="lbl">HaMeR + stereo</span><div class="bar-track"><div class="bar" style="width:18.8%"></div><span class="bar-val" style="left:18.8%">49.5</span></div></div>
+          <div class="bar-row ours" title="Multi-view tracker + HaMeR fallback (ours): 47.5 mm"><span class="lbl">Multi-view (ours)</span><div class="bar-track"><div class="bar" style="width:18%"></div><span class="bar-val" style="left:18%">47.5</span></div></div>
+        </div>
+        <div class="chart" role="img" aria-label="Share of hand joints within 10 pixels in a held-out camera, by method; higher is better. Our multi-view tracker: 33.5 percent; V2D baseline: 13.8 percent.">
+          <h4>Held-out camera accuracy</h4>
+          <div class="sub">% of joints within 10 px (PCK@10), higher is better</div>
+          <div class="bar-row" title="V2D baseline (HaMeR + MoGe depth): 13.8 %"><span class="lbl">V2D baseline</span><div class="bar-track"><div class="bar" style="width:39.4%"></div><span class="bar-val" style="left:39.4%">13.8</span></div></div>
+          <div class="bar-row" title="HaWoR: 21.1 %"><span class="lbl">HaWoR</span><div class="bar-track"><div class="bar" style="width:60.3%"></div><span class="bar-val" style="left:60.3%">21.1</span></div></div>
+          <div class="bar-row" title="EgoFound3R: 16.6 %"><span class="lbl">EgoFound3R</span><div class="bar-track"><div class="bar" style="width:47.4%"></div><span class="bar-val" style="left:47.4%">16.6</span></div></div>
+          <div class="bar-row" title="HaWoR + stereo depth: 24.8 %"><span class="lbl">HaWoR + stereo</span><div class="bar-track"><div class="bar" style="width:70.9%"></div><span class="bar-val" style="left:70.9%">24.8</span></div></div>
+          <div class="bar-row" title="HaMeR + stereo depth: 23.8 %"><span class="lbl">HaMeR + stereo</span><div class="bar-track"><div class="bar" style="width:68%"></div><span class="bar-val" style="left:68%">23.8</span></div></div>
+          <div class="bar-row ours" title="Multi-view tracker + HaMeR fallback (ours): 33.5 %"><span class="lbl">Multi-view (ours)</span><div class="bar-track"><div class="bar" style="width:95.7%"></div><span class="bar-val" style="left:auto;right:6px;color:#fff">33.5</span></div></div>
+        </div>
+      </div>
+      <details class="table">
+        <summary>Show as a table</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Method</th><th>3D joint error (mm)</th><th>Depth bias (mm)</th><th>Held-out PCK@10</th><th>Coverage</th></tr></thead>
+            <tbody>
+              <tr><td>V2D baseline (HaMeR + MoGe depth)</td><td>263.4</td><td>+259.6</td><td>13.8&nbsp;%</td><td>100&nbsp;%</td></tr>
+              <tr><td>HaWoR</td><td>121.1</td><td>+109.3</td><td>21.1&nbsp;%</td><td>93.7&nbsp;%</td></tr>
+              <tr><td>EgoFound3R</td><td>119.2</td><td>+107.7</td><td>16.6&nbsp;%</td><td>50.0&nbsp;% (10 fps output)</td></tr>
+              <tr><td>HaWoR + stereo depth</td><td>53.2</td><td>+15.8</td><td>24.8&nbsp;%</td><td>93.7&nbsp;%</td></tr>
+              <tr><td>HaMeR + stereo depth</td><td>49.5</td><td>+6.7</td><td>23.8&nbsp;%</td><td>100&nbsp;%</td></tr>
+              <tr><td><b>Multi-view tracker + HaMeR fallback (ours)</b></td><td><b>47.5</b></td><td>+7.5</td><td><b>33.5&nbsp;%</b></td><td>97.9&nbsp;%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <h3>Policies and the final submission</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>Per-episode S0 policies</h4>
+          <p>One FlashSAC policy per evaluation episode, trained for 96.8M steps on that episode's reconstructed
+            reference with pickup and object-perturbed resets. For each episode we kept the reconstruction version
+            (v1 or v2) whose policy tracked its reference better.</p>
+          <a class="path" href="https://github.com/the-simsons/ego2sim-nvidia-v2d/tree/main/policy_s0">policy_s0/</a>
+        </div>
+        <div class="card">
+          <h4>Last-day fixes: 0.609 → 0.651</h4>
+          <p>Scoring each episode on its own exposed three weak ones: a spoon tracked upside down (flipped and
+            retrained), a reference whose hands never reached the objects (extra pickup resets), and one episode where
+            the earlier reference version did better.</p>
+          <a class="path" href="https://github.com/the-simsons/ego2sim-nvidia-v2d/tree/main/policy_s0/probe">policy_s0/probe/</a>
+        </div>
+        <div class="card">
+          <h4>Validation against motion capture</h4>
+          <p>Every pipeline change was accepted or rejected on public episodes with motion capture. The v2
+            reconstruction changes raised the reference-only AUC from 0.77 to 0.83 on 9 of them.</p>
+          <a class="path" href="https://github.com/the-simsons/ego2sim-nvidia-v2d/tree/main/scripts">scripts/public_chain_validate.sh</a>
+        </div>
+        <div class="card">
+          <h4>Experiment: shared grasp + per-episode movement</h4>
+          <p>A single behaviour-cloned grasp policy shared across episodes, with a per-episode wrist policy. Grasps
+            transfer between known episodes, but it stayed below the per-episode policies, so it is not in the
+            submission.</p>
+          <a class="path" href="https://github.com/the-simsons/ego2sim-nvidia-v2d/tree/main/policy_gm">policy_gm/</a>
+        </div>
+      </div>
+
+      <h3>Code</h3>
+      <p class="muted">Everything above is in <a href="https://github.com/the-simsons/ego2sim-nvidia-v2d">the-simsons/ego2sim-nvidia-v2d</a>:
+        reconstruction stages in <code>tools/</code> and <code>scripts/</code>, the mesh agent in
+        <code>agentstar_harness/</code>, the hand-tracking benchmark and pipeline stage in <code>handtracking/</code>,
+        and policies in <code>policy_s0/</code> and <code>policy_gm/</code>. It runs against
+        <a href="https://github.com/nvidia-isaac/video_to_data">nvidia-isaac/video_to_data</a> at the evaluator's pinned commit.</p>
+    </div>
+  </section>
+
+  <!-- Placeholder for future sections -->
+  <section class="block" id="next">
+    <div class="wrap">
+      <p class="eyebrow">Coming up</p>
+      <h2>More projects</h2>
+      <div class="soon">We will add new sections here as our work continues over the year.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>© 2026 The Simsons · Code under Apache 2.0</span>
+    <span>Third-party models and data keep their own licences.</span>
+  </div>
+</footer>
+
+<script>
+  // Meshes show a still image first; the 3D model loads when its tile is clicked.
+  document.querySelectorAll(".mesh model-viewer").forEach((mv) => {
+    mv.addEventListener("click", () => mv.dismissPoster && mv.dismissPoster(), { once: true });
+  });
+</script>
+</body>
+</html>
