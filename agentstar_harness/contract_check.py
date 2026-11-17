@@ -13,8 +13,13 @@ Checks, on the newest pass (iterations/*/renders/*/report.json):
   review      NOTES.md has the line  CONTRACT-REVIEW iteration=<newest> turntable=coherent side_by_side=match
   budget      iteration count <= max_iterations
 
+  surface     median depth error of the newest pass against the capture's metric depth: advisory, a check only
+              when the spec sets surface_mae_max_m
+  plateau     the last plateau_window (3) full passes did not beat the earlier best by plateau_gain (0.005), after
+              at least plateau_min_passes (5); ends the run only when size and watertight pass (plateau_window 0 = off)
+
 Writes RUN_DIR/contract_status.json. Exit 0 = all pass (finalize and stop), 1 = keep working (each failed check
-prints what to do), 3 = budget exhausted (finalize the best accepted state now and report honestly).
+prints what to do), 3 = budget exhausted, 4 = plateau (both: finalize the best accepted state now and report honestly).
 """
 import argparse
 import glob
@@ -36,6 +41,54 @@ def glb_longest_extent(path):
     scene = trimesh.load(path, force="scene")
     lo, hi = scene.bounds
     return float(np.max(hi - lo))
+
+
+def pass_history(run_dir, min_frames=3):
+    """[(report path, median IoU, min IoU)] for every full pass, oldest first (sweeps and partial passes are skipped)."""
+    out = []
+    for rp in sorted(glob.glob(os.path.join(run_dir, "iterations", "*", "renders", "*", "report.json"))):
+        v = [f["iou"] for f in json.load(open(rp)).get("frames", []) if f.get("iou") is not None]
+        if len(v) >= min_frames:
+            out.append((rp, float(np.median(v)), float(min(v))))
+    return out
+
+
+def plateau_reached(history, spec):
+    """A sentence when the last `plateau_window` full passes did not beat the best earlier pass by `plateau_gain`
+    (after at least `plateau_min_passes` passes), else None. Past runs kept spending their whole budget on a
+    silhouette threshold they could not reach; the silhouette score does not predict the mesh score (CD-O)."""
+    window = int(spec.get("plateau_window", 3))
+    gain = float(spec.get("plateau_gain", 0.005))
+    if window <= 0 or len(history) < max(int(spec.get("plateau_min_passes", 5)), window + 1):
+        return None
+    before = max(h[1] for h in history[:-window])
+    recent = max(h[1] for h in history[-window:])
+    if recent - before > gain:
+        return None
+    return (f"the last {window} full passes did not improve the median IoU by more than {gain} "
+            f"(best before {before:.3f}, best since {recent:.3f}).")
+
+
+def surface_line(rep, spec):
+    """Depth agreement of the newest pass against the capture's metric depth: (ok, message). Advisory unless the
+    spec sets surface_mae_max_m. A large error with a one-sided bias is a pose that is off along the camera ray,
+    which hides the shape errors a silhouette cannot see (hollow vs solid, concave faces)."""
+    fr = [f for f in rep.get("frames", []) if f.get("depth_mae") is not None]
+    if not fr:
+        return None
+    mae = float(np.median([f["depth_mae"] for f in fr]))
+    scale = float(rep.get("scale") or 0)
+    bias = float(np.median([f.get("depth_bias_canon") or 0.0 for f in fr])) * scale
+    limit = spec.get("surface_mae_max_m")
+    ok = limit is None or mae <= float(limit)
+    msg = f"median depth error {mae * 100:.1f} cm, median bias {bias * 100:+.1f} cm"
+    msg += f" (need <= {float(limit) * 100:.1f} cm)" if limit is not None else " (advisory)"
+    if abs(bias) > 0.5 * mae and mae > 0.015:
+        msg += (" -> the model sits off along the camera ray in most frames: re-pose with depth, "
+                "utils.sweep_batch --frames <all> --depth-weight 0.5 --apply, before judging the shape")
+    elif mae > 0.015:
+        msg += " -> surfaces disagree with the measured depth: check hollow/open parts and concave faces in depth_residual_<frame>.png"
+    return ok, msg
 
 
 def main(argv=None):
@@ -109,27 +162,41 @@ def main(argv=None):
     budget_ok = n_iter <= spec["max_iterations"]
     checks["budget"] = (budget_ok, f"{n_iter} iterations used of {spec['max_iterations']}")
 
+    surface = surface_line(rep, spec) if rep else None
+    if surface is not None and spec.get("surface_mae_max_m") is not None:
+        checks["surface"] = surface
+
     passed = all(ok for k, (ok, _) in checks.items() if k != "budget")
-    status = {"newest_iteration": newest_iter, "report": rep_path, "all_pass": passed,
+    history = pass_history(run)
+    best = max(history, key=lambda h: h[1]) if history else None
+    plateau = None if passed else plateau_reached(history, spec)
+    # a plateau ends the run only when everything that is cheap to fix already passes
+    plateau_stop = bool(plateau and checks["size"][0] and checks["watertight"][0])
+    status = {"newest_iteration": newest_iter, "report": rep_path, "all_pass": passed, "plateau": plateau_stop,
+              "best_pass": None if best is None else {"report": best[0], "iou_median": best[1], "iou_min": best[2]},
+              "surface": None if surface is None else surface[1],
               "checks": {k: {"passes": ok, "detail": m} for k, (ok, m) in checks.items()}}
     with open(os.path.join(run, "contract_status.json"), "w") as f:
         json.dump(status, f, indent=2)
     for k, (ok, m) in checks.items():
         print(f"[{'PASS' if ok else 'FAIL'}] {k:10s} {m}")
+    if surface is not None and "surface" not in checks:
+        print(f"[info] {'surface':10s} {surface[1]}")
     if passed:
         print("CONTRACT MET -> finalize: write the final report section in NOTES.md and stop.")
         return 0
+    if best:
+        print(f"best pass by median IoU: {best[0]} (median {best[1]:.3f}, worst {best[2]:.3f}); its scene is "
+              "iterations/<N>/scene.py")
     if not budget_ok:
-        best = None
-        for rp in sorted(glob.glob(os.path.join(run, "iterations", "*", "renders", "*", "report.json"))):
-            v = [f["iou"] for f in json.load(open(rp)).get("frames", []) if f.get("iou") is not None]
-            if v and (best is None or np.median(v) > best[1]):
-                best = (rp, float(np.median(v)), float(min(v)))
-        if best:
-            print(f"best pass by median IoU: {best[0]} (median {best[1]:.3f}, worst {best[2]:.3f}); its scene is "
-                  "iterations/<N>/scene.py")
         print("BUDGET EXHAUSTED -> finalize the best accepted state now and report what still fails.")
         return 3
+    if plateau_stop:
+        print(f"PLATEAU -> {plateau} Size and watertightness pass, so more passes are unlikely to pay for themselves: "
+              "restore the best pass's scene.py if the newest is worse, finalize, report the remaining gap honestly, stop.")
+        return 4
+    if plateau:
+        print(f"note: {plateau} Fix the failing size/watertight check; the run can then end on the best pass.")
     return 1
 
 
