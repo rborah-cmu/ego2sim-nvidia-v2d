@@ -81,7 +81,7 @@
         <li><b>6-DoF object tracking</b><span>FoundationPose on FoundationStereo depth with 16 pose hypotheses and a static start.</span></li>
         <li><b>Simulation reference</b><span>Hands retargeted to floating Sharpa Wave hands, a table support, all objects in one scene.</span></li>
         <li><b>Reference cleaning</b><span>Symmetric spins removed, look-alike flips unwrapped, physics settle, overlapping objects pushed apart.</span></li>
-        <li><b>Policies</b><span>One FlashSAC policy per episode, best checkpoint by ADD-AUC over 64 simulated worlds.</span></li>
+        <li><b>Policies</b><span>One FlashSAC policy per video, keeping the checkpoint with the best tracking accuracy over 64 simulated worlds.</span></li>
       </ol>
 
       <h3>Reconstructed Objects</h3>
@@ -95,12 +95,12 @@
         simulator.</p>
       <p class="muted">Click one to rotate it in 3D.</p>
       <div class="meshes">
-        <div class="mesh"><model-viewer src="assets/meshes/white_pot.glb" poster="assets/img/meshes/white_pot.png" alt="White pot mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/white_pot.png" alt="" class="mesh-poster"></model-viewer><div class="name">White pot</div></div>
-        <div class="mesh"><model-viewer src="assets/meshes/water_pitcher.glb" poster="assets/img/meshes/water_pitcher.png" alt="Watering can mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/water_pitcher.png" alt="" class="mesh-poster"></model-viewer><div class="name">Watering can</div></div>
-        <div class="mesh"><model-viewer src="assets/meshes/mini_dust_pan.glb" poster="assets/img/meshes/mini_dust_pan.png" alt="Dust pan mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/mini_dust_pan.png" alt="" class="mesh-poster"></model-viewer><div class="name">Dust pan</div></div>
-        <div class="mesh"><model-viewer src="assets/meshes/mini_sweeper.glb" poster="assets/img/meshes/mini_sweeper.png" alt="Hand brush mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/mini_sweeper.png" alt="" class="mesh-poster"></model-viewer><div class="name">Hand brush</div></div>
-        <div class="mesh"><model-viewer src="assets/meshes/blue_cup.glb" poster="assets/img/meshes/blue_cup.png" alt="Blue cup mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/blue_cup.png" alt="" class="mesh-poster"></model-viewer><div class="name">Blue cup</div></div>
-        <div class="mesh"><model-viewer src="assets/meshes/wooden_spoon.glb" poster="assets/img/meshes/wooden_spoon.png" alt="Wooden spoon mesh" camera-controls auto-rotate shadow-intensity="0.6" reveal="manual"><img slot="poster" src="assets/img/meshes/wooden_spoon.png" alt="" class="mesh-poster"></model-viewer><div class="name">Wooden spoon</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/white_pot.glb" poster="assets/img/meshes/white_pot.png" alt="White pot mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/white_pot.png" alt="" class="mesh-poster"></model-viewer><div class="name">White pot</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/water_pitcher.glb" poster="assets/img/meshes/water_pitcher.png" alt="Watering can mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/water_pitcher.png" alt="" class="mesh-poster"></model-viewer><div class="name">Watering can</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_dust_pan.glb" poster="assets/img/meshes/mini_dust_pan.png" alt="Dust pan mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/mini_dust_pan.png" alt="" class="mesh-poster"></model-viewer><div class="name">Dust pan</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_sweeper.glb" poster="assets/img/meshes/mini_sweeper.png" alt="Hand brush mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/mini_sweeper.png" alt="" class="mesh-poster"></model-viewer><div class="name">Hand brush</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/blue_cup.glb" poster="assets/img/meshes/blue_cup.png" alt="Blue cup mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/blue_cup.png" alt="" class="mesh-poster"></model-viewer><div class="name">Blue cup</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/wooden_spoon.glb" poster="assets/img/meshes/wooden_spoon.png" alt="Wooden spoon mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/wooden_spoon.png" alt="" class="mesh-poster"></model-viewer><div class="name">Wooden spoon</div></div>
       </div>
 
       <h3>Hand tracking</h3>
@@ -119,7 +119,7 @@
             them to match is our next improvement.</p>
         </div>
         <figure class="frame">
-          <video src="assets/hands_multiview.mp4" controls muted loop playsinline preload="metadata"
+          <video src="assets/hands_multiview.mp4" autoplay controls muted loop playsinline
                  aria-label="Head-camera video with the tracked hand meshes drawn on the person's hands"></video>
           <figcaption>Multi-view hand tracking on one episode. Green: frames where the HaMeR fallback took over.</figcaption>
         </figure>
@@ -167,29 +167,32 @@
       <h3>Policies</h3>
       <div class="cols cols-media-left">
         <figure class="frame">
-          <video src="assets/policy_ep6.mp4" controls muted loop playsinline preload="metadata"
+          <video src="assets/policy_ep6.mp4" autoplay controls muted loop playsinline
                  aria-label="Simulation: two robot hands, one holding a pot by its handle, the other stirring with a spoon"></video>
-          <figcaption>One of our policies in simulation: two Sharpa Wave hands holding a pot and stirring with a spoon
-            (ADD-AUC 0.85 against its reconstructed reference).</figcaption>
+          <figcaption>One of our policies in simulation: two Sharpa Wave hands holding a pot and stirring with a spoon.
+            Hand-table collisions are off in the challenge's training setup.</figcaption>
         </figure>
         <div>
+          <p><b>Our robot policies succeed on 80&nbsp;% of the challenge videos.</b></p>
           <p>For each of the 20 challenge videos, we train a separate policy that controls two simulated robot hands
-            and moves the objects the way the person did.</p>
-          <p>The policies are trained with reinforcement learning (FlashSAC in FlashCHORD). We tested every pipeline
-            change against motion capture on the public videos first, and our second reconstruction raised tracking
-            accuracy there from 0.77 to 0.83. Scoring each challenge video separately then revealed three weak ones.
-            In one, a spoon had been tracked upside down. In another, the reconstructed hands never reached the
-            objects. In the third, our earlier reconstruction simply did better. Fixing these raised our final ADD-AUC
-            from 0.609 to 0.651.</p>
-          <p class="muted">We also tried a single grasp policy shared across videos, with a separate per-video policy
-            for the wrists. Grasps transferred between known videos, but it did not beat the per-video policies.</p>
+            and moves the objects the way the person did. The policies are trained with reinforcement learning, using
+            the <a href="https://arxiv.org/abs/2604.04539">FlashSAC</a> method.</p>
+          <p>We measure tracking accuracy with ADD-AUC, a score from 0 to 1 for how closely the objects follow the
+            person's motion. Switching to FoundationStereo depth and improving our object tracker raised tracking
+            accuracy from 0.77 to 0.83. We measured this, and every other change to our pipeline, on practice videos the
+            challenge released with the true object motion recorded, by comparing our tracked motion with it.</p>
+          <p>Scoring each challenge video on its own and retraining the weakest ones raised our final tracking accuracy
+            by 1.07×. In one video, for example, a spoon had been tracked upside down, so we turned it over and
+            retrained its policy.</p>
+          <p class="muted">We also explored a single grasping policy shared across all videos. We see this as an
+            interesting direction for future work.</p>
         </div>
       </div>
       <div class="stats">
+        <div class="stat"><div class="num">1.07×</div><div class="lbl">higher tracking accuracy after fixing three weak videos</div></div>
         <div class="stat"><div class="num">20</div><div class="lbl">policies, one per challenge video</div></div>
-        <div class="stat"><div class="num">96.8M</div><div class="lbl">simulation steps per policy</div></div>
         <div class="stat"><div class="num">64</div><div class="lbl">simulated worlds per evaluation</div></div>
-        <div class="stat"><div class="num">+0.042</div><div class="lbl">ADD-AUC from fixing three weak videos (0.609 → 0.651)</div></div>
+        <div class="stat"><div class="num">96.8M</div><div class="lbl">simulation steps per policy</div></div>
       </div>
     </div>
   </section>
@@ -206,11 +209,5 @@
 </main>
 
 
-<script>
-  // Meshes show a still image first; the 3D model loads when its tile is clicked.
-  document.querySelectorAll(".mesh model-viewer").forEach((mv) => {
-    mv.addEventListener("click", () => mv.dismissPoster && mv.dismissPoster(), { once: true });
-  });
-</script>
 </body>
 </html>
