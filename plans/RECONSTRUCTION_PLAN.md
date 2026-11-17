@@ -51,8 +51,8 @@ baseline to beat; re-measure before relying on any of them.
 ## 3. Code, data and machines
 
 - Repo: `the-simsons/ego2sim-nvidia-v2d`. **Branch from `main`** (it has teammates' hand tracking and policy code).
-  There are uncommitted changes in one checkout (tiered agent harness, plateau stop, cost report); ask before
-  assuming they are merged.
+  The tiered agent harness, plateau stop and cost report are on branch `recon-plan-and-tiered-harness` with this
+  plan; check whether it has been merged before building on them.
 - `tools/` (reconstruction tools), `scripts/` (drivers), `agentstar_harness/` (agent brief, contract, planner agent),
   `policy_s0/` (policy training). `scripts/ego2sim_public_episode.sh` is the reference driver for one episode.
 - Compute: `riddle` (2x RTX 4090, shared lab machine). Read `CLAUDE.md` and `NOTES.md` first: they are not in the
