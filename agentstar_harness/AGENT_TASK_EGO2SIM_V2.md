@@ -38,6 +38,10 @@ You do not grade yourself. `analysis.contract_check` does (see **Done**).
 `CAPTURE` (frames, object masks, occluder masks, known cameras, **metric stereo depth**), `FRAMES` (first = reference),
 `RUN_DIR`, and **`RUN_DIR/contract_spec.json`** (read-only): the acceptance thresholds and the
 **metric size target** measured from stereo depth.
+**Depth.** The capture's depth comes from the camera's own sensor when it has one (a stereo pair or LiDAR), and
+`CAPTURE/capture.json` → `source.depth_values` says which. Sensor depth is metric: use it for sizes, heights and for
+placing the model along the camera ray. If it says the depth is estimated from a single image, treat it as a hint for
+shape only: its scale and its flat or tilted surfaces can be wrong, so lean on the size target in the contract.
 `HAND_MASKS_DIR` holds **occluders**: hands, plus other objects only where they are in FRONT of this
 object (depth-ordered). Pass it as `--hand-mask`; it is don't-care. Everything else is fair game,
 so a render spilling onto a tray or rack behind the object is penalised, as it should be.
@@ -64,6 +68,22 @@ so a render spilling onto a tray or rack behind the object is penalised, as it s
    reading numbers. A geometry edit is accepted only on side-by-side + turntable.
 9. **Cheap looking:** open one image per question; prefer the diagnostic frames; do not reopen an image
    you already read this pass; never open whole directories of images.
+10. **Model the object, not the capture rig.** Leave out anything attached to the object for recording: motion-capture
+    marker balls and their stems, tape, stickers, labels, cables. They are not part of the object, the reference
+    scan does not have them, and each one modelled costs score. Note in `NOTES.md` what you left out.
+11. **Measure heights, do not estimate them.** A head camera looks down, so heights and relief are what it sees worst
+    and what past meshes got most wrong (a pan built half its real height, a handle arch a third too low). Take every
+    out-of-plane dimension from the depth, not from the outline: total height, wall height, handle and rim heights,
+    how far a foot or bulge sticks out underneath.
+    - Start from the fused oriented-box extents that `analysis.measure_depth` reports (W:H:D).
+    - For a part, read the depth across it in a frame that sees it from the side, or compare the depth of its top
+      with the surface it stands on.
+    - **The underside counts.** While the object rests on the table its underside is hidden; the frames where it is
+      lifted or tilted are the only evidence. Make one of the diagnostic frames such a frame, and model what it
+      shows (feet, bulges, recesses, a raised base) rather than a flat bottom.
+    - If a height cannot be measured in any frame, say so in `NOTES.md` and use the planner's estimate.
+12. **Undo what does not help.** Keep an edit only if the side-by-sides and the depth agreement are at least as good
+    as before it. Otherwise restore the previous `scene.py` and try something else: do not stack edits on a worse state.
 
 ## Loop
 1. **Decompose (once).** `micromamba run -n artscript env PYTHONPATH=harness python -m analysis.viz.frame_sheet --run-dir RUN_DIR`;

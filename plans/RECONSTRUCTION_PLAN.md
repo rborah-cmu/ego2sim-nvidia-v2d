@@ -41,6 +41,15 @@ baseline to beat; re-measure before relying on any of them.
   spent their whole budget on it. Sample is small: confirm on the benchmark (section 4).
 - **The agent's poses drift along the camera ray.** Final passes show 2-8 cm median depth error with a one-sided bias,
   because pose sweeps ran with depth weight 0. Until that is fixed the depth residual cannot show shape errors.
+- **Meshes lose their score on height and relief the head camera barely sees.** Error maps of four agent meshes
+  against their scans (2026-11-17): a dust pan was built as a flat tray 2.3 cm tall where the real one is 4.5 cm,
+  with a bulge under the tray and raised walls at the wide end; a lid's handle arch was a third too low. The
+  underside is hidden while an object rests on the table. Scale was not the problem (the metric's own rescale was
+  3-5%). Two runs also modelled motion-capture marker balls as parts of the object.
+- **The planner/builder split has not shown a gain.** First comparison, one run per object: lid CD-O 0.277 -> 0.341,
+  dust pan 0.373 -> 0.400 (both worse, possibly run-to-run noise). Depth-weighted posing did cut depth error
+  (5.4 -> 2.4 cm on the pan) without improving CD-O, because it cannot show hidden surfaces. Do not make the split
+  the default without repeats (P2.3).
 - **Our own meshes cost more accuracy than anything else in tracking** (0.833 -> 0.691 AUC).
 - **Symmetric and near-symmetric objects flip.** A plain cuboid has 4 equivalent orientations; a spoon read
   upside-down cost a whole episode on the leaderboard. Resolving flips needs both a symmetry declaration per mesh
@@ -139,27 +148,72 @@ sensor and no sync event. Fixing capture is cheaper than compensating in softwar
 Judge by: the same clip scored with and without each capture change (depth sensor vs monocular depth; calibrated
 vs guessed intrinsics). Keep monocular-only as a tracked configuration, because it is the hardest and most general.
 
+### 5.1a Depth: use the camera's sensor when it has one
+
+Every stage that needs metric geometry (object size, mesh heights, pose along the ray, hand depth, table plane,
+camera scale) reads depth through one interface, which picks the best source the recording has:
+
+| Priority | Source | Notes |
+|---|---|---|
+| 1 | calibrated stereo pair | FoundationStereo on the rectified pair, as on the challenge rig; dense and metric |
+| 2 | LiDAR / time-of-flight (for example the phone's) | metric but low resolution and short range; upsample with the colour image, and fuse with stereo or monocular depth for edges and thin parts |
+| 3 | monocular metric depth (MoGe) | last resort; 3-6% short on our clips and unreliable on flat or tilted surfaces; rescale against anything metric that is available |
+
+- One module returns depth, a per-pixel confidence and `depth_source`, and writes the source into the capture
+  manifest (`source.depth_values`) so the agent brief and every report can say what they relied on.
+- When two sources exist, fuse them (`tools/fuse_depth.py` already fuses stereo with MoGe) and keep the
+  disagreement as the confidence.
+- The first recordings were made with a phone that has LiDAR but saved colour video only. Record depth with the
+  video from now on (P1.3). If the recording app also offers the phone's own camera tracking, treat that as an
+  optional input to compare against visual odometry; it is on-device sensing, not motion capture, but ask the
+  user before depending on it.
+- Report every benchmark row with its depth source. A gain that only exists with sensor depth is still a gain,
+  but the monocular row shows what the pipeline can do on arbitrary video.
+
 ### 5.2 Object mesh (P2)
 
-Largest single loss today. Three sources, then a selector.
+Largest single loss today, and the diagnosis in 2.1 says why: the task clip does not show enough of the object.
+So the order is: get more evidence (a scan clip), get a prior for what stays unseen (a generative model), and use
+the agent to repair and verify rather than to model from nothing. Then a selector.
+
+The original AgentSTAR worked from monocular video with estimated depth. We have, or can have, sensor depth
+(section 5.1a): use it everywhere a size, a height or a distance along the camera ray is needed.
 
 - **P2.1 Scan clip reconstruction (new, expected to be the best source).** A 20-30 s video orbiting the object on
-  the table, then flipped and orbited again. Segment with SAM 2, estimate cameras from the background, reconstruct
-  (a surface-oriented method: 2D Gaussian splatting or neural SDF, or classical multi-view stereo), merge the two
-  halves by registering the object, scale from metric depth, make watertight, simplify. Output in a fixed canonical
-  frame with a symmetry file (P2.4). This uses video only, so it is allowed in the final pipeline.
-- **P2.2 The agent loop, corrected.** Already drafted in `agentstar_harness/AGENT_TASK_EGO2SIM_V2.md` and
-  `contract_check.py`. Finish it:
-  - pose sweeps with depth weight on, so the model sits at the measured distance;
-  - gate on **surface agreement**, not overlap: per-frame depth residual inside the mask after the pose is fixed,
-    reported in millimetres; keep overlap as a sanity floor (for example 0.85), not a target of 0.93;
-  - a fixed canonical origin, so a proportion edit does not invalidate every pose;
-  - a fitting tool that tunes the numeric parameters of `build()` (proportions, radii, wall thickness) against the
-    renders with a derivative-free optimiser, so the model spends turns on structure, not on nudging numbers.
-  Run the planner/builder split (`E2S_TIERED=1`) on at least 6 objects and compare cost and CD-O with the
-  single-model runs before making it the default.
-- **P2.3 Image-to-3D model as a candidate.** One or two current open models (single image or few views to mesh),
-  scaled with metric depth. Cheap to add, sometimes good on common objects.
+  the table, then flipped and orbited again, so the underside is seen. Segment with SAM 2, estimate cameras from
+  the background, reconstruct (a surface-oriented method: 2D Gaussian splatting or neural SDF, or classical
+  multi-view stereo, with sensor depth as supervision where available), merge the two halves by registering the
+  object, scale from metric depth, make watertight, simplify. Output in a fixed canonical frame with a symmetry
+  file (P2.4). This uses video only, so it is allowed in the final pipeline.
+- **P2.2 A generative prior for the unseen sides (new).** Before any agent work, generate a complete mesh from a
+  few masked views of the object with a multi-view image-to-3D model conditioned on mask, camera and depth. The
+  reference design is NVIDIA's GATOR (Wu et al., arXiv:2610.11215): it reconstructs complete, scene-aligned objects
+  from 1-10 casual views, improves with more views, and places the result by refining translation and isotropic
+  scale against silhouette and depth. Its code is not released yet ("coming soon"); until it is, use the open
+  models it builds on or compares with (TRELLIS.2, Pixal3D, SAM 3D, multi-view variants) and swap GATOR in when
+  available. Feed it the views that differ most, including a lifted or tilted frame when the clip has one. Metric
+  scale comes from our depth, not from the model.
+- **P2.3 The agent as a repairer, not a modeller.** GATOR's own numbers argue for this: an agent modelling from
+  scratch produced no valid mesh in 1 minute and needed 5 for all ten test objects, a generated mesh took about
+  30 s and was more accurate than the agent at 20 minutes, and agent edits on top of the generated mesh helped
+  appearance and local topology but slightly worsened geometry on one real dataset. So:
+  - start the agent from the best available mesh (P2.1 or P2.2); model from primitives only when both fail;
+  - targeted repairs that keep the frame and the scale: holes, thin walls, flat bottoms that should not be flat,
+    parts fused that should be separate, watertightness, levelling;
+  - **every edit is checked and reverted if it does not help**: render before and after under the same cameras,
+    compare depth agreement and silhouette, keep the edit only if neither gets worse (brief rule 12). GATOR names
+    automatic geometric verification of agent edits as its open problem; we have metric depth to do it with;
+  - a verdict at the end: `done` or `needs_review`, with what is unverified;
+  - a time or iteration budget per object, small by default (GATOR uses 10 minutes).
+  The existing brief `agentstar_harness/AGENT_TASK_EGO2SIM_V2.md` already has: depth-weighted posing, heights
+  measured from depth, the underside taken from lifted frames, capture markers left out, undo of unhelpful edits,
+  and a symmetry file. Still to build: a gate on **surface agreement** in millimetres (overlap stays only as a
+  sanity floor, for example 0.85); a fixed canonical origin so a proportion edit does not invalidate every pose; a
+  fitting tool that tunes the numeric parameters of `build()` with a derivative-free optimiser; and a start-from-
+  mesh mode. Repeat the planner/builder comparison on at least 6 objects with 3 runs each before deciding on it.
+- **P2.3b A physical sanity check.** Drop each mesh on a plane in the simulator with its collision hulls: it must
+  come to rest in the pose it rests in on the table in the video, not rock or topple. Cheap, and it catches
+  missing feet and bases that are not flat where they should be.
 - **P2.4 Symmetry declaration** for every mesh: `{"revolution_axis": ..., "flips_180": [...]}` in the canonical
   frame, written by the source that made the mesh and checked by rendering (a declared symmetry must reproduce the
   silhouettes and depth within noise). Consumed by tracking (5.3) and cleaning.
@@ -282,12 +336,15 @@ switch its default. Mocap recording continues after that only as a periodic chec
 2. **P1.1-P1.3** capture fixes that need the lab (markers, calibration, sync), in parallel with step 3 because they
    need a person in the lab. Ask the user to schedule them.
 3. **P3.1 + P3.4** symmetry-aware tracking and frame 0: cheapest large gain, code mostly exists.
-4. **P2.2** corrected agent loop (depth-aware, surface gate), then the planner/builder comparison.
-5. **P2.1** scan clips, then **P2.4-P2.5** symmetry files and the selector.
-6. **P3.2-P3.3** refinement and physical constraints.
-7. **P4** camera path from video, scored once camera markers exist.
-8. **P5** hands.
-9. **P3.5-P3.6** learned corrector and confidence, then the gate of section 8, class by class.
+4. **5.1a** the depth interface, so sensor depth is used wherever a recording has it.
+5. **P2.2** a generated starting mesh, then **P2.3** the agent in repair mode with checked and reverted edits and
+   the surface gate, then the planner/builder comparison with repeats.
+6. **P2.1** scan clips (needs the recording protocol of P1.4), then **P2.3b, P2.4, P2.5** sanity check, symmetry
+   files and the selector.
+7. **P3.2-P3.3** refinement and physical constraints.
+8. **P4** camera path from video, scored once camera markers exist.
+9. **P5** hands.
+10. **P3.5-P3.6** learned corrector and confidence, then the gate of section 8, class by class.
 
 After each step: run the benchmark, add the row to `bench/history.csv`, write what changed and what it cost in
 `NOTES.md`, and stop for review if a number moved the wrong way.

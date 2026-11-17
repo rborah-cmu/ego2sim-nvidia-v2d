@@ -20,9 +20,14 @@ your reasoning, only this file, so put the conclusions and the reason for each i
    fraction of the longest dimension, where it attaches, its colour. Say which parts are hollow or open, with the
    wall thickness, and how to keep them watertight.
 2. **Proportions.** Width : height : depth as numbers, and the evidence (which frame, what you measured against).
+   Heights and relief are what a downward-looking head camera sees worst, so give every out-of-plane dimension its
+   own line with its source: total height, wall height, handle and rim heights, anything under the object (feet,
+   bulges, a raised base). Mark each as measured from depth or estimated, and tell the builder which frame to
+   measure the estimated ones in. Do not assume a flat bottom.
+   Leave out anything attached for recording (motion-capture marker balls, tape, labels): list it as "not modelled".
 3. **Symmetry.** The axis of revolution if any, and which 180-degree flips leave the object looking the same.
-4. **Frames.** Three diagnostic frames (clearest view, a profile, a view showing hidden parts) and which frames
-   the object moves in.
+4. **Frames.** Three diagnostic frames (clearest view, a profile, and a frame where the object is lifted or tilted so
+   its underside or far side shows) and which frames the object moves in.
 5. **Order of work.** What to build first, what to leave out, and the two mistakes most likely on this object.
 6. **On a stuck call:** the diagnosis in one sentence (shape, pose, depth, or an occluder capping the score), the
    single next change, how the builder will know it worked, and whether to stop and finalize the best pass instead.
