@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Simsons</title>
+  <meta name="description" content="The Simsons: turning egocentric human video into simulation-ready robot learning data. Our entry to the NVIDIA Video-to-Data Challenge 2026, Track 3.">
+  <link rel="stylesheet" href="assets/style.css">
+  <script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">The Simsons</a>
+    <nav class="site" aria-label="Sections">
+      <a href="#v2d-2026">NVIDIA V2D Challenge</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Home -->
+  <section class="hero">
+    <div class="wrap">
+      <h1>From human video<br>to robot learning.</h1>
+      <!-- EDIT: one or two sentences about the team, its members and affiliation. -->
+      <p class="lede">We are The Simsons. We turn egocentric videos of people handling everyday objects into
+        simulation-ready data: object meshes, object and hand motion, and robot policies trained on them.</p>
+      <p class="note">This page collects our projects. First up: our entry to the NVIDIA Video-to-Data Challenge 2026.</p>
+    </div>
+  </section>
+
+  <!-- NVIDIA V2D Challenge 2026 -->
+  <section class="block" id="v2d-2026">
+    <div class="wrap">
+      <p class="eyebrow">NVIDIA Video-to-Data Challenge 2026 · Track 3</p>
+      <h2>Ego2Sim: egocentric video to simulated manipulation</h2>
+
+      <div class="cols">
+        <div>
+          <p>The NVIDIA Video-to-Data (V2D) Challenge ran alongside CoRL 2026, with the winners announced on
+            12&nbsp;November 2026. Our team finished <b>17th of 47</b> on the final
+            <a href="https://nvidia-isaac.github.io/video_to_data/v2d_challenge/#awards">Track&nbsp;3 leaderboard</a>.</p>
+          <p>Track&nbsp;3 starts from short videos, filmed by a camera on a person's head, of that person picking up and
+            moving everyday objects: pots, cups, a watering can, a dust pan. The goal is to teach a robot hand in
+            simulation to do the same thing. The score is how closely the objects the robot moves in simulation follow
+            the way the person moved them in the video.</p>
+        </div>
+        <figure class="frame">
+          <img src="assets/img/episodes_grid.jpg" alt="Nine Track 3 videos from the head camera: a person moving pots, cups, a dust pan, a watering can and other objects on a round table." loading="lazy">
+          <figcaption>Nine Track 3 tasks, seen from the head camera.</figcaption>
+        </figure>
+      </div>
+
+      <h3 class="center">Our final scores</h3>
+      <div class="stats stats-6">
+        <div class="stat"><div class="num">0.651</div><div class="lbl">Object-tracking accuracy</div><div class="abbr">ADD-AUC · higher is better</div></div>
+        <div class="stat"><div class="num">0.80</div><div class="lbl">Success rate, SPIDER criterion</div><div class="abbr">SP-SR · higher is better</div></div>
+        <div class="stat"><div class="num">0.10</div><div class="lbl">Success rate, ManipTrans criterion (much stricter)</div><div class="abbr">MP-SR · higher is better</div></div>
+        <div class="stat"><div class="num">5.78&nbsp;cm</div><div class="lbl">Relative position error of the objects</div><div class="abbr">RPE · lower is better</div></div>
+        <div class="stat"><div class="num">4.57&nbsp;cm</div><div class="lbl">Mean per-point error of the objects</div><div class="abbr">MPPE · lower is better</div></div>
+        <div class="stat"><div class="num">0.29&nbsp;cm</div><div class="lbl">Object shape error (Chamfer distance)</div><div class="abbr">CD-O · lower is better</div></div>
+      </div>
+      <h3>Code</h3>
+      <p>Our code is available for review in
+        <a href="https://github.com/the-simsons/ego2sim-nvidia-v2d">the-simsons/ego2sim-nvidia-v2d</a>.</p>
+
+      <h3>How it works</h3>
+      <p>From the video alone, our Ego2Sim pipeline reconstructs each object's 3D shape and its motion (6-DoF
+        trajectory) and the person's hand motion, retargets the hands onto floating Sharpa Wave robot hands, and trains
+        one reinforcement-learning policy per video in simulation (FlashSAC in FlashCHORD).</p>
+      <p class="muted">Our pipeline used the Video-to-Data challenge pipeline as a baseline.</p>
+      <ol class="pipeline">
+        <li><b>Stereo depth</b><span>SGBM on the undistorted head cameras, and FoundationStereo depth for object tracking.</span></li>
+        <li><b>Segmentation</b><span>SAM 2 masks for every object and hand, prompted from object detections and WiLoR hands.</span></li>
+        <li><b>Depth fusion &amp; camera motion</b><span>MoGe depth fused with stereo, and stereo visual odometry for the head.</span></li>
+        <li><b>Hands</b><span>3D MANO hands per frame, repaired, with occluded grasps carried along with the object.</span></li>
+        <li><b>Object meshes</b><span>AgentSTAR: an AI agent models each object from simple shapes in Blender, checked against the video. The best mesh is kept per object.</span></li>
+        <li><b>6-DoF object tracking</b><span>FoundationPose on FoundationStereo depth with 16 pose hypotheses and a static start.</span></li>
+        <li><b>Simulation reference</b><span>Hands retargeted to floating Sharpa Wave hands, a table support, all objects in one scene.</span></li>
+        <li><b>Reference cleaning</b><span>Symmetric spins removed, look-alike flips unwrapped, physics settle, overlapping objects pushed apart.</span></li>
+        <li><b>Policies</b><span>One FlashSAC policy per video, keeping the checkpoint with the best tracking accuracy over 64 simulated worlds.</span></li>
+      </ol>
+
+      <h3>Reconstructed Objects</h3>
+      <p><b>Our object reconstruction placed 11th of 47</b> on the challenge's
+        <a href="https://www.kaggle.com/competitions/v2d-challenge-track3-cd-o/leaderboard">object-shape leaderboard</a>,
+        with our shapes on average just 0.29&nbsp;cm from the true object surfaces.</p>
+      <p>Simulation needs a clean 3D model of every object, and building one directly from video depth tends to give
+        noisy, incomplete surfaces. So our AgentSTAR harness has an AI agent model each object the way a 3D artist
+        would. It builds the object from simple shapes such as cylinders and boxes in Blender, and compares its renders
+        with the video until they match. The result is a clean, real-size model that behaves correctly in the physics
+        simulator.</p>
+      <p class="muted">Click one to rotate it in 3D.</p>
+      <div class="meshes">
+        <div class="mesh"><model-viewer src="assets/meshes/white_pot.glb" poster="assets/img/meshes/white_pot.png" alt="White pot mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/white_pot.png" alt="" class="mesh-poster"></model-viewer><div class="name">White pot</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/water_pitcher.glb" poster="assets/img/meshes/water_pitcher.png" alt="Watering can mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/water_pitcher.png" alt="" class="mesh-poster"></model-viewer><div class="name">Watering can</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_dust_pan.glb" poster="assets/img/meshes/mini_dust_pan.png" alt="Dust pan mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/mini_dust_pan.png" alt="" class="mesh-poster"></model-viewer><div class="name">Dust pan</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/mini_sweeper.glb" poster="assets/img/meshes/mini_sweeper.png" alt="Hand brush mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/mini_sweeper.png" alt="" class="mesh-poster"></model-viewer><div class="name">Hand brush</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/blue_cup.glb" poster="assets/img/meshes/blue_cup.png" alt="Blue cup mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/blue_cup.png" alt="" class="mesh-poster"></model-viewer><div class="name">Blue cup</div></div>
+        <div class="mesh"><model-viewer src="assets/meshes/wooden_spoon.glb" poster="assets/img/meshes/wooden_spoon.png" alt="Wooden spoon mesh" camera-controls auto-rotate shadow-intensity="0.6"><img slot="poster" src="assets/img/meshes/wooden_spoon.png" alt="" class="mesh-poster"></model-viewer><div class="name">Wooden spoon</div></div>
+      </div>
+
+      <h3>Hand tracking</h3>
+      <div class="cols">
+        <div>
+          <p><b>Our hand tracking is a substantial improvement over the baseline.</b></p>
+          <p>It cuts the 3D error of the hand joints by more than five times, and more than doubles accuracy when
+            checked from a camera it never sees. The baseline gets the shape of the hand right, but places hands about
+            26&nbsp;cm too far from the camera because it estimates depth from a single image. Our tracker brings that
+            error down to under 1&nbsp;cm.</p>
+          <p>Our multi-view hand tracker builds on HaWoR, a hand-tracking model. It moves each hand onto keypoints
+            triangulated from two head cameras, and switches to a second model, HaMeR, on any frame where HaWoR's hand
+            disagrees with the image. The challenge data provides three head cameras, one colour and two monochrome,
+            which makes this triangulation possible.</p>
+          <p class="muted">As the video shows, the hands can look slightly too large from the head camera. Resizing
+            them to match is our next improvement.</p>
+        </div>
+        <figure class="frame">
+          <video src="assets/hands_multiview.mp4" autoplay controls muted loop playsinline
+                 aria-label="Head-camera video with the tracked hand meshes drawn on the person's hands"></video>
+          <figcaption>Multi-view hand tracking on one episode. Green: frames where the HaMeR fallback took over.</figcaption>
+        </figure>
+      </div>
+
+      <div class="charts">
+        <div class="chart" role="img" aria-label="3D hand joint error by method, in millimetres; lower is better. Our multi-view tracker: 47.5 mm; V2D baseline: 263.4 mm.">
+          <h4>3D joint error</h4>
+          <div class="sub">mm, lower is better</div>
+          <div class="bar-row" title="V2D baseline (HaMeR + MoGe depth): 263.4 mm"><span class="lbl">V2D baseline</span><div class="bar-track"><div class="bar" style="width:100%"></div><span class="bar-val" style="left:auto;right:6px">263.4</span></div></div>
+          <div class="bar-row" title="HaWoR: 121.1 mm"><span class="lbl">HaWoR</span><div class="bar-track"><div class="bar" style="width:46%"></div><span class="bar-val" style="left:46%">121.1</span></div></div>
+          <div class="bar-row" title="EgoFound3R: 119.2 mm"><span class="lbl">EgoFound3R</span><div class="bar-track"><div class="bar" style="width:45.3%"></div><span class="bar-val" style="left:45.3%">119.2</span></div></div>
+          <div class="bar-row" title="HaWoR + stereo depth: 53.2 mm"><span class="lbl">HaWoR + stereo</span><div class="bar-track"><div class="bar" style="width:20.2%"></div><span class="bar-val" style="left:20.2%">53.2</span></div></div>
+          <div class="bar-row" title="HaMeR + stereo depth: 49.5 mm"><span class="lbl">HaMeR + stereo</span><div class="bar-track"><div class="bar" style="width:18.8%"></div><span class="bar-val" style="left:18.8%">49.5</span></div></div>
+          <div class="bar-row ours" title="Multi-view tracker + HaMeR fallback (ours): 47.5 mm"><span class="lbl">Multi-view (ours)</span><div class="bar-track"><div class="bar" style="width:18%"></div><span class="bar-val" style="left:18%">47.5</span></div></div>
+        </div>
+        <div class="chart" role="img" aria-label="Share of hand joints within 10 pixels in a held-out camera, by method; higher is better. Our multi-view tracker: 33.5 percent; V2D baseline: 13.8 percent.">
+          <h4>Held-out camera accuracy</h4>
+          <div class="sub">% of joints within 10 px (PCK@10), higher is better (axis to 40&nbsp;%)</div>
+          <div class="bar-row" title="V2D baseline (HaMeR + MoGe depth): 13.8 %"><span class="lbl">V2D baseline</span><div class="bar-track"><div class="bar" style="width:34.5%"></div><span class="bar-val" style="left:34.5%">13.8</span></div></div>
+          <div class="bar-row" title="HaWoR: 21.1 %"><span class="lbl">HaWoR</span><div class="bar-track"><div class="bar" style="width:52.8%"></div><span class="bar-val" style="left:52.8%">21.1</span></div></div>
+          <div class="bar-row" title="EgoFound3R: 16.6 %"><span class="lbl">EgoFound3R</span><div class="bar-track"><div class="bar" style="width:41.5%"></div><span class="bar-val" style="left:41.5%">16.6</span></div></div>
+          <div class="bar-row" title="HaWoR + stereo depth: 24.8 %"><span class="lbl">HaWoR + stereo</span><div class="bar-track"><div class="bar" style="width:62.0%"></div><span class="bar-val" style="left:62.0%">24.8</span></div></div>
+          <div class="bar-row" title="HaMeR + stereo depth: 23.8 %"><span class="lbl">HaMeR + stereo</span><div class="bar-track"><div class="bar" style="width:59.5%"></div><span class="bar-val" style="left:59.5%">23.8</span></div></div>
+          <div class="bar-row ours" title="Multi-view tracker + HaMeR fallback (ours): 33.5 %"><span class="lbl">Multi-view (ours)</span><div class="bar-track"><div class="bar" style="width:83.8%"></div><span class="bar-val" style="left:83.8%">33.5</span></div></div>
+        </div>
+      </div>
+      <details class="table">
+        <summary>Show as a table</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Method</th><th>3D joint error (mm)</th><th>Depth bias (mm)</th><th>Held-out PCK@10</th><th>Coverage</th></tr></thead>
+            <tbody>
+              <tr><td>V2D baseline (HaMeR + MoGe depth)</td><td>263.4</td><td>+259.6</td><td>13.8&nbsp;%</td><td>100&nbsp;%</td></tr>
+              <tr><td>HaWoR</td><td>121.1</td><td>+109.3</td><td>21.1&nbsp;%</td><td>93.7&nbsp;%</td></tr>
+              <tr><td>EgoFound3R</td><td>119.2</td><td>+107.7</td><td>16.6&nbsp;%</td><td>50.0&nbsp;% (10 fps output)</td></tr>
+              <tr><td>HaWoR + stereo depth</td><td>53.2</td><td>+15.8</td><td>24.8&nbsp;%</td><td>93.7&nbsp;%</td></tr>
+              <tr><td>HaMeR + stereo depth</td><td>49.5</td><td>+6.7</td><td>23.8&nbsp;%</td><td>100&nbsp;%</td></tr>
+              <tr><td><b>Multi-view tracker + HaMeR fallback (ours)</b></td><td><b>47.5</b></td><td>+7.5</td><td><b>33.5&nbsp;%</b></td><td>97.9&nbsp;%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <h3>Policies</h3>
+      <div class="cols cols-media-left">
+        <figure class="frame">
+          <video src="assets/policy_ep6.mp4" autoplay controls muted loop playsinline
+                 aria-label="Simulation: two robot hands, one holding a pot by its handle, the other stirring with a spoon"></video>
+          <figcaption>One of our policies in simulation: two Sharpa Wave hands holding a pot and stirring with a spoon.
+            Hand-table collisions are off in the challenge's training setup.</figcaption>
+        </figure>
+        <div>
+          <p><b>Our robot policies succeed on 80&nbsp;% of the challenge videos.</b></p>
+          <p>For each of the 20 challenge videos, we train a separate policy that controls two simulated robot hands
+            and moves the objects the way the person did. The policies are trained with reinforcement learning, using
+            the <a href="https://arxiv.org/abs/2604.04539">FlashSAC</a> method.</p>
+          <p>We measure tracking accuracy with ADD-AUC, a score from 0 to 1 for how closely the objects follow the
+            person's motion. Switching to FoundationStereo depth and improving our object tracker raised tracking
+            accuracy from 0.77 to 0.83. We measured this, and every other change to our pipeline, on practice videos the
+            challenge released with the true object motion recorded, by comparing our tracked motion with it.</p>
+          <p>Scoring each challenge video on its own and retraining the weakest ones raised our final tracking accuracy
+            by 1.07×. In one video, for example, a spoon had been tracked upside down, so we turned it over and
+            retrained its policy.</p>
+          <p class="muted">We also explored a single grasping policy shared across all videos. We see this as an
+            interesting direction for future work.</p>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">1.07×</div><div class="lbl">higher tracking accuracy after fixing three weak videos</div></div>
+        <div class="stat"><div class="num">20</div><div class="lbl">policies, one per challenge video</div></div>
+        <div class="stat"><div class="num">64</div><div class="lbl">simulated worlds per evaluation</div></div>
+        <div class="stat"><div class="num">96.8M</div><div class="lbl">simulation steps per policy</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Placeholder for future sections -->
+  <section class="block" id="next">
+    <div class="wrap">
+      <p class="eyebrow">Coming up</p>
+      <h2>More projects</h2>
+      <div class="soon">We will add new sections here as our work continues over the year.</div>
+    </div>
+  </section>
+
+</main>
+
+
+</body>
+</html>
