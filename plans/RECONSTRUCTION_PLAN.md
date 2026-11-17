@@ -206,8 +206,9 @@ The original AgentSTAR worked from monocular video with estimated depth. We have
   - a verdict at the end: `done` or `needs_review`, with what is unverified;
   - a time or iteration budget per object, small by default (GATOR uses 10 minutes).
   The existing brief `agentstar_harness/AGENT_TASK_EGO2SIM_V2.md` already has: depth-weighted posing, heights
-  measured from depth, the underside taken from lifted frames, capture markers left out, undo of unhelpful edits,
-  and a symmetry file. Still to build: a gate on **surface agreement** in millimetres (overlap stays only as a
+  measured from depth, the underside taken from lifted frames, undo of unhelpful edits, and a symmetry file. It
+  also tells the agent to skip unmistakable motion-capture marker balls, as a minor rule that must never remove
+  real parts: final recordings will not have markers, so do not build on it. Still to build: a gate on **surface agreement** in millimetres (overlap stays only as a
   sanity floor, for example 0.85); a fixed canonical origin so a proportion edit does not invalidate every pose; a
   fitting tool that tunes the numeric parameters of `build()` with a derivative-free optimiser; and a start-from-
   mesh mode. Repeat the planner/builder comparison on at least 6 objects with 3 runs each before deciding on it.

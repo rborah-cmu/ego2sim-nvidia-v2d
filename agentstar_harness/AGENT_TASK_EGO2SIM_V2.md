@@ -68,9 +68,11 @@ so a render spilling onto a tray or rack behind the object is penalised, as it s
    reading numbers. A geometry edit is accepted only on side-by-side + turntable.
 9. **Cheap looking:** open one image per question; prefer the diagnostic frames; do not reopen an image
    you already read this pass; never open whole directories of images.
-10. **Model the object, not the capture rig.** Leave out anything attached to the object for recording: motion-capture
-    marker balls and their stems, tape, stickers, labels, cables. They are not part of the object, the reference
-    scan does not have them, and each one modelled costs score. Note in `NOTES.md` what you left out.
+10. **Motion-capture markers (minor, only when obvious).** Some recordings have small reflective marker balls stuck
+    on the object. If something is unmistakably one of those (a small grey sphere on a short stem, several alike),
+    leave it out and note it in `NOTES.md`. This is a low-priority clean-up, never a reason to drop geometry:
+    **when in doubt, it is part of the object, so model it.** Knobs, buttons, rivets, feet, handles, lids, labels
+    moulded into the surface and anything else that belongs to the object stay in.
 11. **Measure heights, do not estimate them.** A head camera looks down, so heights and relief are what it sees worst
     and what past meshes got most wrong (a pan built half its real height, a handle arch a third too low). Take every
     out-of-plane dimension from the depth, not from the outline: total height, wall height, handle and rim heights,

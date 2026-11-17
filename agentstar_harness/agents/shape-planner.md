@@ -24,7 +24,9 @@ your reasoning, only this file, so put the conclusions and the reason for each i
    own line with its source: total height, wall height, handle and rim heights, anything under the object (feet,
    bulges, a raised base). Mark each as measured from depth or estimated, and tell the builder which frame to
    measure the estimated ones in. Do not assume a flat bottom.
-   Leave out anything attached for recording (motion-capture marker balls, tape, labels): list it as "not modelled".
+   If the object carries unmistakable motion-capture marker balls (small grey spheres on short stems, several
+   alike), list them as "not modelled". This is minor: when unsure whether something is a marker or a real part
+   (a knob, rivet, button, foot), treat it as a real part and include it.
 3. **Symmetry.** The axis of revolution if any, and which 180-degree flips leave the object looking the same.
 4. **Frames.** Three diagnostic frames (clearest view, a profile, and a frame where the object is lifted or tilted so
    its underside or far side shows) and which frames the object moves in.
