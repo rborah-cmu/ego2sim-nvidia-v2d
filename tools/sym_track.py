@@ -19,7 +19,7 @@ own pose per frame, twins of a perfectly symmetric mesh are indistinguishable; t
 steadier frame 0.
 
     python tools/sym_track.py --poses fp_box --camera camera_vo_video.npz --mesh BlueBox.obj \
-        --symmetry '{"flips_180": ["x", "y", "z"]}' --fps 30 --out fp_sym
+        --symmetry '{"flips_180": ["x", "y", "z"]}' --fps 30 --out fp_sym [--object-masks M --hand-masks H]
 Writes per-frame pose JSONs (camera <- mesh, same format as the input) and OUT/sym_track.json (stats)."""
 import argparse
 import json
@@ -74,6 +74,26 @@ def viterbi(W, S, centre, pos_weight=POS_WEIGHT, stay=STAY_COST):
     return out
 
 
+def first_contact(obj_dir, hand_dir, n, px, min_overlap=50):
+    """First frame where the dilated hand mask overlaps the object mask (n if never)."""
+    import cv2
+    hd = Path(hand_dir)
+    subs = [d for d in sorted(hd.iterdir()) if d.is_dir()] or [hd]
+    ker = np.ones((2 * px + 1, 2 * px + 1), np.uint8)
+    for i in range(n):
+        o = cv2.imread(str(Path(obj_dir) / f"{i:06d}.png"), cv2.IMREAD_GRAYSCALE)
+        if o is None:
+            continue
+        h = np.zeros_like(o)
+        for d in subs:
+            x = cv2.imread(str(d / f"{i:06d}.png"), cv2.IMREAD_GRAYSCALE)
+            if x is not None:
+                h |= (cv2.resize(x, (o.shape[1], o.shape[0]), interpolation=cv2.INTER_NEAREST) > 0).astype(np.uint8)
+        if ((cv2.dilate(h, ker) > 0) & (o > 0)).sum() > min_overlap:
+            return i
+    return n
+
+
 def robust_mean(T, tol_cm, tol_deg):
     med = mean_pose(T)
     dp = np.linalg.norm(T[:, :3, 3] - med[:3, 3], axis=1) * 100
@@ -95,6 +115,9 @@ def main(argv=None):
     ap.add_argument("--min-still-s", type=float, default=0.3)
     ap.add_argument("--tol-cm", type=float, default=1.5)
     ap.add_argument("--tol-deg", type=float, default=5.0)
+    ap.add_argument("--object-masks", help="object mask dir (NNNNNN.png): with --hand-masks, the still start ends at the first hand contact")
+    ap.add_argument("--hand-masks", help="hand mask dir (a dir of per-track subdirs is merged)")
+    ap.add_argument("--contact-px", type=int, default=15, help="hand mask dilation (full-resolution px) that counts as contact")
     a = ap.parse_args(argv)
     sym = json.loads(Path(a.symmetry).read_text()) if Path(a.symmetry).is_file() else json.loads(a.symmetry)
 
@@ -118,6 +141,11 @@ def main(argv=None):
                       for j in range(3)], 1)
     still = still_mask(ctr_s, a.fps, speed=a.still_speed) & ok
     st = runs(still, int(a.min_still_s * a.fps))
+    contact = first_contact(a.object_masks, a.hand_masks, N, a.contact_px) if a.object_masks and a.hand_masks else None
+    if contact is not None and a.hold == "first":
+        # video-only stillness cue from the recording protocol: the object rests until a hand reaches it. World speed
+        # cannot show this while the camera path drifts (MoGe-depth odometry: ~5 cm/s apparent motion at rest).
+        st = [(0, contact)] if contact >= int(a.min_still_s * a.fps) else []
     held = []
     for k, (s0, s1) in enumerate(st):
         if a.hold == "none" or (a.hold == "first" and k > 0):
@@ -141,7 +169,7 @@ def main(argv=None):
     stats = {"frames": int(N), "tracked": int(ok.sum()), "twins": len(S),
              "twin_counts": np.bincount(choice[ok], minlength=len(S)).tolist(),
              "twin_switches": int((np.diff(choice[ok]) != 0).sum()),
-             "raw_jumps_gt90deg": jumps(W), "out_jumps_gt90deg": jumps(Wc), "held_still": held,
+             "raw_jumps_gt90deg": jumps(W), "out_jumps_gt90deg": jumps(Wc), "held_still": held, "first_hand_contact": contact,
              "symmetry": sym, "camera": str(a.camera), "source": str(a.poses), "trajectory_source": "video"}
     json.dump(stats, open(out / "sym_track.json", "w"), indent=1)
     print(f"{out}: {ok.sum()}/{N} frames, twins {stats['twin_counts']}, switches {stats['twin_switches']}, "
