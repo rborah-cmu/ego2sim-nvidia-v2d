@@ -23,7 +23,20 @@
    "BlueBox": "clips/BlueBox_Take1_001/box_masks"
   },
   "hand_masks": "ep/BlueBox_Take1_001/hand_masks",
-  "hand": "left"
+  "hand": "left",
+  "object_meshes": {
+   "BlueBox": {
+    "mesh": "BlueBox.obj",
+    "symmetry": {
+     "flips_180": [
+      "x",
+      "y",
+      "z"
+     ]
+    },
+    "note": "the bare cuboid mesh given to FoundationPose; its symmetry is what the reconstruction may assume"
+   }
+  }
  },
  "ground_truth": {
   "mocap_csv": "traj/BlueBox_Take1_001.csv",

@@ -35,7 +35,7 @@ def pose_to_dict(T):
 
 def load_pose_dir(d, n=None):
     """Per-frame pose JSONs 000000.json ... -> (N,4,4); missing frames are NaN."""
-    files = sorted(Path(d).glob("*.json"))
+    files = sorted(f for f in Path(d).glob("*.json") if f.stem.isdigit())
     count = n if n is not None else (int(files[-1].stem) + 1 if files else 0)
     out = np.full((count, 4, 4), np.nan)
     for f in files:

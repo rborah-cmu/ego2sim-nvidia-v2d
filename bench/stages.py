@@ -22,11 +22,14 @@ CAMERA = {
 # object stages: per-frame pose JSONs, camera <- mesh
 OBJECT = {
     "fp_box": {"dir": "fp_box", "mocap_used_for": [], "about": "FoundationPose on MoGe depth, video only"},
+    "fp_sym": {"dir": "fp_sym", "mocap_used_for": [],
+               "about": "fp_box after tools/sym_track.py (look-alike twins chosen over the clip, frame 0 from the still start)"},
     "fp_mocap": {"dir": "fp_mocap", "mocap_used_for": ["object_trajectory", "camera_path", "sync", "mesh_placement"],
                  "about": "the mocap trajectory expressed in the camera (mocap-assisted reference)"},
 }
 PRESETS = {
     "video_baseline": ("video_vo", "fp_box"),
+    "video_sym": ("video_vo", "fp_sym"),
     "mocap_assisted": ("mocap", "fp_mocap"),
     "diag_fp_mocap_camera": ("mocap", "fp_box"),
 }
