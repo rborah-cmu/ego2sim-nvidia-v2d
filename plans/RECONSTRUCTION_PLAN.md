@@ -303,6 +303,13 @@ object-trajectory error.*
   odometry. It did not help: 11.85 cm against 11.52, because the planes come from the same monocular depth.*
 - *This moves 5.1a (sensor depth: LiDAR or stereo) and a SLAM camera with global bundle adjustment ahead of further
   tracker work.*
+- *Pi3X as the camera (`tools/pi3_camera.py`, stage `video_pi3`) is the new best video-only pipeline: 8.15 cm,
+  5.29 deg, ADD-S AUC 0.549 (rgbd_vo: 11.52, 5.50, 0.382).*
+  - *Two fixes were needed. Each chunk's Sim(3) scale has to be removed from the rotations. Pi3X's metric scale is
+    1.4-2x too large, so the path is rescaled to MoGe depth.*
+  - *Chunk scale still varies 0.6-1.2 within a clip. Longer chunks (24) did not change the result.*
+  - *Feeding the uncalibrated intrinsics (f = 713) made it worse. Calibrate the camera (P1.3) before trusting
+    anything that uses f.*
 
 Needed to put hands and objects in one world, and it must come from video.
 
