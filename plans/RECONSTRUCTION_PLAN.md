@@ -119,6 +119,35 @@ Acceptance for P0: the 3 existing clips score through `bench/run.py`; the existi
 within 1 mm; a **video-only baseline** exists for those clips (camera from video, object from FoundationPose, table
 from depth) with its numbers in `bench/history.csv`. That baseline is expected to be poor. It is the number to beat.
 
+**Status (2026-11-19): P0 accepted, with the gaps below.** Code is in `bench/`, `e2s/`, `tests/`, `tools/rgbd_vo.py`.
+- P0.1: `e2s/mocap/` (Motive loader, rigid-body fits, sync, ground truth) and `e2s/mocap/assist/` (sync, camera,
+  table), configured from the manifest. Re-running them reproduces the 2026-11-08 outputs on all 3 clips at 0.000 mm
+  (camera paths, sync lags, table depth). The outline-refine step is sensitive to the library versions: it reproduces
+  in the `v2d_sam2` env (scipy 1.17, OpenCV 5.0) but differs by 30-44 mm with the system scipy 1.11 / OpenCV 4.6.
+  Run it in `v2d_sam2`.
+- P0.2: `bench/clips/*.json`. All 3 clips are `val`, because there is only one object and one session (needs P1.5).
+- P0.3: object-trajectory metrics are in place. Missing: frame-0 error (needs a second alignment source), mesh CD-O
+  in the bench, camera and hand metrics (need P1.1 markers), and timing (needs P1.2). Alignment tries the 4
+  look-alike start orientations of a cuboid. Without this, FoundationPose starting 180 deg turned scored as a
+  140 deg error for the whole clip.
+- P0.4: `python -m bench.run --pipeline video_baseline | camera=X,object=Y`. The stage spec plays the role of `--stage`.
+- P0.5: `tests/test_firewall.py`. Provenance is written by `build_ego_bundle.py` (`--trajectory-source`), copied
+  into each retargeted partition by `ego2sim_episode.sh`, and checked by `train_episode.sh` via
+  `tools/check_provenance.py` (`FINAL=1` refuses non-video). Not done: provenance in package `quality.csv`, and running
+  reconstruction in a process that cannot see the mocap files (today the separation is only by convention: the
+  manifest's `inputs` block).
+
+| pipeline (val, 3 clips, pooled) | source | pos median / p95 cm | rot median deg | ADD-S AUC |
+|---|---|---|---|---|
+| mocap_assisted (sanity) | mocap | 0.00 / 0.00 | 0.00 | 0.997 |
+| diag: FoundationPose + mocap camera | mixed | 2.33 / 7.95 | 1.46 | 0.840 |
+| **video_baseline**: rgbd_vo (MoGe depth) + FoundationPose | **video** | **11.52 / 27.36** | **5.50** | **0.382** |
+
+The diagnostic row flatters FoundationPose, because the mocap camera was itself fitted to FoundationPose poses. Even
+so, the gap between the two rows puts most of the video-only error in the camera path: the MoGe-depth odometry
+drifts 8-19 cm per clip. Rotation error is small without the camera error. That makes stereo/LiDAR depth (5.1a) and
+camera work (P4) worth more than this plan's order suggests. P3.1 (symmetry) comes next as planned.
+
 ## 5. Accuracy work, in order of expected gain
 
 Each item states what to build, how to judge it, and what would make us drop it. Do them in the order of section 9,
