@@ -16,6 +16,8 @@ from e2s.geometry import load_pose_dir
 # camera stages: an npz with camera_to_world (N,4,4); world = whatever the stage uses (camera 0, or mocap world)
 CAMERA = {
     "video_vo": {"file": "camera_vo_video.npz", "mocap_used_for": [], "about": "RGB-D odometry on the background (tools/rgbd_vo.py)"},
+    "video_pg": {"file": "camera_vo_pg.npz", "mocap_used_for": [],
+                 "about": "rgbd_vo refined by tools/camera_pose_graph.py (table planes + resting object)"},
     "mocap": {"file": "camera_vo.npz", "mocap_used_for": ["camera_path", "sync", "mesh_placement"],
               "about": "camera from the mocap object and FoundationPose (e2s/mocap/assist)"},
 }
@@ -30,6 +32,7 @@ OBJECT = {
 PRESETS = {
     "video_baseline": ("video_vo", "fp_box"),
     "video_sym": ("video_vo", "fp_sym"),
+    "video_pg": ("video_pg", "fp_box"),
     "mocap_assisted": ("mocap", "fp_mocap"),
     "diag_fp_mocap_camera": ("mocap", "fp_box"),
 }
