@@ -161,9 +161,12 @@ sensor and no sync event. Fixing capture is cheaper than compensating in softwar
 - **P1.1 Ground truth for more stages.** Rigid marker clusters on the camera and on the back of each hand or wrist.
   One-time calibration from the camera's marker cluster to its optical centre (hand-eye calibration with a
   checkerboard seen by the camera while mocap tracks the cluster). These are for scoring only (firewall applies).
-- **P1.2 Sync.** A sharp tap of the object on the table at the start and end of every take, and a bright LED visible
-  to the camera and timestamped by the mocap system if the lab has a sync box. Video-only sync must then be within
-  one video frame of it.
+- **P1.2 Sync.** The user is building a system that synchronises the mocap and video recordings in hardware
+  (2026-11-19). Once it exists, the video-to-mocap offset is a recorded value: it goes into the clip manifest
+  (`ground_truth.sync`, with `method: hardware`), and no pipeline step estimates it. Do not build more software sync.
+  Until then, `e2s/mocap/assist/sync.py` and the lag searches in `e2s/mocap/assist/camera.py` stay, only for the
+  existing unsynchronised clips. Give `camera.py` an option to keep the recorded lag fixed, and use it for
+  hardware-synced clips. Sync is a scoring/mocap-side quantity either way: reconstruction never uses it.
 - **P1.3 Camera.** Calibrate intrinsics and distortion once per camera and lens (checkerboard, fisheye model if the
   ultra-wide is kept) and undistort before anything else. Prefer a rig with real depth: a calibrated stereo pair
   like the challenge's, or the phone's LiDAR depth recorded with the video. Record at 60 fps with a short exposure:
@@ -261,6 +264,15 @@ that mesh (a mesh is only as good as the tracking it supports). Target for P2: t
   selection with a global choice over time: keep the top hypotheses per frame (including symmetric twins) and solve
   for the smoothest consistent path (Viterbi), with terms for the table plane and for hand contact. A prototype
   exists for a cuboid in `cam_from_fp.py` (`pick_flips`).
+  *Status 2026-11-19 (P3.1 + P3.4, first pass): `tools/sym_track.py`, bench stage `fp_sym`, preset `video_sym`.
+  - It runs a Viterbi over the look-alike twins of the tracker's pose in the video-camera world.
+  - Frame 0 is the robust mean of the frames before the first hand contact, taken from the object and hand masks.
+    Contact comes at frames 24/22/10, while mocap shows the box first moving at 52/72/29, so this cue is safe.
+  - World speed cannot detect stillness: MoGe-odometry drift makes a resting box move about 5 cm/s.
+  - Result on val: 11.52 -> 11.58 cm, 5.50 -> 5.51 deg (no change). FoundationPose made no twin switches on these
+    clips, and the benchmark already aligns on the still start.
+  - Still to do: top-k FoundationPose hypotheses, which need a wrapper around the pinned module and a GPU run.
+    Table and hand terms in the Viterbi.*
 - **P3.2 Render-and-compare refinement** after tracking: per frame, optimise the pose against depth, silhouette and
   edges (and texture when the mesh has it), with a temporal smoothness term, over a sliding window. Initialise from
   P3.1. This is where sub-centimetre accuracy has to come from.
