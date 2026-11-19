@@ -294,6 +294,16 @@ training than a centimetre of noise.
 
 ### 5.4 Camera path (P4)
 
+*Status 2026-11-19: on the 3 BlueBox clips the camera path, not the object tracker, causes most of the
+object-trajectory error.*
+- *FoundationPose in the camera frame is within about 1-2 cm and 1.5 deg of the mocap reference.*
+- *The `rgbd_vo` camera on MoGe depth drifts 4-6 deg (median) in rotation, and its scale is inconsistent from clip to
+  clip (best global scale 0.33-0.84).*
+- *`tools/camera_pose_graph.py` (stage `video_pg`) adds per-frame table planes and the resting object to the
+  odometry. It did not help: 11.85 cm against 11.52, because the planes come from the same monocular depth.*
+- *This moves 5.1a (sensor depth: LiDAR or stereo) and a SLAM camera with global bundle adjustment ahead of further
+  tracker work.*
+
 Needed to put hands and objects in one world, and it must come from video.
 
 - Visual odometry or SLAM on the static background with hands and objects masked out, metric scale from depth.
