@@ -15,7 +15,10 @@ which the object rests. Residuals, each divided by its sigma, robust loss:
     python tools/camera_pose_graph.py --vo camera_vo_video.npz --poses fp_box --mesh BlueBox.obj --depth moge_depth \
         --intrinsics '{"fx":713,"fy":713,"cx":960,"cy":540}' --object-masks box_masks --hand-masks hand_masks \
         --out camera_vo_pg.npz
-Writes camera_to_world (same world as --vo) and OUT.json (planes, stretches, residual summaries)."""
+Writes camera_to_world (same world as --vo) and OUT.json (planes, stretches, residual summaries).
+
+Recommended (2026-11-19, 3 val clips): on the Pi3X camera (tools/pi3_camera.py) with --no-table --scale-every 10:
+8.15 -> 5.62 cm, ADD-S AUC 0.549 -> 0.648. On rgbd_vo it did not help, and MoGe table planes hurt rotation in both.
 import argparse
 import json
 import sys
@@ -31,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from e2s.geometry import load_pose_dir, mean_pose, runs  # noqa: E402
 from e2s.masks import hand_contact, mask_dirs, union  # noqa: E402
 
-SIGMA = {"odo_rot_deg": 0.15, "odo_trans_m": 0.002, "lost_factor": 20.0, "table_normal_deg": 1.5, "table_height_m": 0.01,
+SIGMA = {"scale_prior_log": 0.3, "scale_smooth_log": 0.05, "odo_rot_deg": 0.15, "odo_trans_m": 0.002, "lost_factor": 20.0, "table_normal_deg": 1.5, "table_height_m": 0.01,
          "rest_rot_deg": 2.0, "rest_pos_m": 0.015}
 
 
@@ -94,8 +97,12 @@ def frame_planes(depth_dir, K, n, centres, excl_dirs, n_pred0, R_vo, step=4, rad
     return planes
 
 
-def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA):
+def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA, scale_every=0):
+    """scale_every > 0 adds one odometry scale per that many frames (log scale, prior and smoothness), for inputs whose
+    translation scale wanders along the clip (Pi3X chunks are chained by Sim(3))."""
     N = len(c2w0)
+    nS = int(np.ceil((N - 1) / scale_every)) if scale_every else 0
+    seg = (np.arange(1, N) - 1) // scale_every if scale_every else np.zeros(N - 1, int)
     R0, t0 = c2w0[:, :3, :3], c2w0[:, :3, 3]
     rel_R = np.einsum("nji,njk->nik", R0[:-1], R0[1:])
     rel_t = np.einsum("nji,nj->ni", R0[:-1], t0[1:] - t0[:-1])
@@ -112,23 +119,26 @@ def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA):
     E0 = c2w0 @ np.nan_to_num(Tcm)
     W0 = [mean_pose(E0[a:b]) for a, b in stretches]
     rest_idx = [(k, i) for k, (a, b) in enumerate(stretches) for i in range(a, b) if not np.isnan(Tcm[i, 0, 0])]
-    nP = 6 * N + 6 * len(stretches)
+    nW = 6 * len(stretches)
+    nP = 6 * N + nW + nS
 
     def unpack(x):
         d = x[:6 * N].reshape(N, 6)
         R = Rot.from_rotvec(d[:, :3]).as_matrix() @ R0
         t = t0 + d[:, 3:]
-        w = x[6 * N:].reshape(-1, 6)
+        w = x[6 * N:6 * N + nW].reshape(-1, 6)
         WR = [Rot.from_rotvec(w[k, :3]).as_matrix() @ W0[k][:3, :3] for k in range(len(W0))]
         Wt = [W0[k][:3, 3] + w[k, 3:] for k in range(len(W0))]
-        return R, t, WR, Wt
+        ls = x[6 * N + nW:]
+        return R, t, WR, Wt, ls
 
     def residuals(x):
-        R, t, WR, Wt = unpack(x)
+        R, t, WR, Wt, ls = unpack(x)
+        sc = np.exp(ls[seg])[:, None] if nS else 1.0
         out = [x[:6] * 1e3]
         Rr = np.einsum("nji,njk->nik", R[:-1], R[1:])
         er = Rot.from_matrix(np.einsum("nji,njk->nik", rel_R, Rr)).as_rotvec() / s_or[:, None]
-        et = (np.einsum("nji,nj->ni", R[:-1], t[1:] - t[:-1]) - rel_t) / s_ot[:, None]
+        et = (np.einsum("nji,nj->ni", R[:-1], t[1:] - t[:-1]) - sc * rel_t) / s_ot[:, None]
         out += [er.ravel(), et.ravel()]
         if len(tab):
             nc = np.array([planes[i][0] for i in tab])
@@ -142,16 +152,20 @@ def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA):
             Wc = WR[k] @ centre + Wt[k]
             out += [Rot.from_matrix(WR[k].T @ ER).as_rotvec() / np.radians(sigma["rest_rot_deg"]),
                     (Ec - Wc) / sigma["rest_pos_m"]]
+        if nS:
+            out += [ls / sigma["scale_prior_log"], np.diff(ls) / sigma["scale_smooth_log"]]
         return np.concatenate(out)
 
     # Jacobian sparsity, in the residual order above
-    rows = 6 + 6 * (N - 1) + (4 * len(tab)) + 6 * len(rest_idx)
+    rows = 6 + 6 * (N - 1) + (4 * len(tab)) + 6 * len(rest_idx) + (2 * nS - 1 if nS else 0)
     J = lil_matrix((rows, nP), dtype=int)
     J[0:6, 0:6] = 1
     r = 6
     for blk in range(2):
         for i in range(1, N):
             J[r:r + 3, 6 * (i - 1):6 * (i + 1)] = 1
+            if blk == 1 and nS:
+                J[r:r + 3, 6 * N + nW + seg[i - 1]] = 1
             r += 3
     for i in tab:
         J[r:r + 3, 6 * i:6 * i + 6] = 1
@@ -163,11 +177,17 @@ def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA):
         J[r:r + 6, 6 * i:6 * i + 6] = 1
         J[r:r + 6, 6 * N + 6 * k:6 * N + 6 * k + 6] = 1
         r += 6
+    for k in range(nS):
+        J[r, 6 * N + nW + k] = 1
+        r += 1
+    for k in range(1, nS):
+        J[r, 6 * N + nW + k - 1:6 * N + nW + k + 1] = 1
+        r += 1
     assert r == rows, (r, rows)
     x0 = np.zeros(nP)
     r0 = residuals(x0)
     sol = least_squares(residuals, x0, jac_sparsity=J, loss="soft_l1", f_scale=2.0, x_scale=1e-2, max_nfev=50, verbose=0)
-    R, t, _, _ = unpack(sol.x)
+    R, t, _, _, ls = unpack(sol.x)
     T = np.tile(np.eye(4), (N, 1, 1))
     T[:, :3, :3], T[:, :3, 3] = R, t
 
@@ -179,6 +199,7 @@ def optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=SIGMA):
         return o
     return T, {"rms_before": part(r0), "rms_after": part(sol.fun), "cost": float(sol.cost), "nfev": int(sol.nfev),
                "table_frames": int(len(tab)), "rest_frames": len(rest_idx),
+               "odometry_scales": np.exp(ls).round(3).tolist() if nS else None,
                "world_table": {"normal": nw.tolist(), "d": dw} if first else None}
 
 
@@ -195,6 +216,9 @@ def main(argv=None):
     ap.add_argument("--min-rest-frames", type=int, default=8)
     ap.add_argument("--no-table", action="store_true")
     ap.add_argument("--no-rest", action="store_true")
+    ap.add_argument("--scale-every", type=int, default=0, help="frames per odometry scale variable (0 = fixed scale)")
+    ap.add_argument("--odo-rot-deg", type=float, default=SIGMA["odo_rot_deg"])
+    ap.add_argument("--odo-trans-m", type=float, default=SIGMA["odo_trans_m"])
     a = ap.parse_args(argv)
     K = json.loads(Path(a.intrinsics).read_text()) if Path(a.intrinsics).is_file() else json.loads(a.intrinsics)
     vo = np.load(a.vo)
@@ -202,7 +226,7 @@ def main(argv=None):
     stats_p = Path(a.vo).with_suffix(".json")
     lost = np.zeros(len(c2w0), bool)
     if stats_p.is_file():
-        for s in json.load(open(stats_p))["per_frame"]:
+        for s in json.load(open(stats_p)).get("per_frame", []):
             lost[s["frame"]] = s["lost"]
     Tcm = load_pose_dir(a.poses, len(c2w0))
     N = len(c2w0)
@@ -218,8 +242,9 @@ def main(argv=None):
         first = frame_planes(a.depth, K, 1, centres, excl, None, c2w0[:, :3, :3])[0]
         n_w0 = c2w0[0, :3, :3] @ first[0] if first else None
         planes = frame_planes(a.depth, K, N, centres, excl, n_w0, c2w0[:, :3, :3])
-    T, info = optimise(c2w0, Tcm, centre, planes, stretches, lost)
-    np.savez(a.out, camera_to_world=T, method="rgbd_vo+pose_graph", source=str(a.vo))
+    sig = dict(SIGMA, odo_rot_deg=a.odo_rot_deg, odo_trans_m=a.odo_trans_m)
+    T, info = optimise(c2w0, Tcm, centre, planes, stretches, lost, sigma=sig, scale_every=a.scale_every)
+    np.savez(a.out, camera_to_world=T, method="pose_graph", source=str(a.vo))
     info.update({"rest_stretches": [list(map(int, s)) for s in stretches], "contact_frames": int(contact.sum()),
                  "planes_found": int(sum(p is not None for p in planes)), "trajectory_source": "video"})
     json.dump(info, open(Path(a.out).with_suffix(".json"), "w"), indent=1)

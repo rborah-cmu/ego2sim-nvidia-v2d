@@ -22,6 +22,9 @@ CAMERA = {
                   "about": "Pi3X video odometry, 16-frame chunks, overlap 6, MoGe scale (tools/pi3_camera.py)"},
     "video_pi3c24": {"file": "camera_vo_pi3c24.npz", "mocap_used_for": [],
                      "about": "Pi3X video odometry, 24-frame chunks, overlap 8, MoGe scale"},
+    "video_pi3_joint": {"file": "camera_vo_pi3_joint.npz", "mocap_used_for": [],
+                        "about": "Pi3X camera refined jointly with the object tracker: resting-object constraints + per-10-frame scale "
+                                 "(tools/camera_pose_graph.py --no-table --scale-every 10)"},
     "mocap": {"file": "camera_vo.npz", "mocap_used_for": ["camera_path", "sync", "mesh_placement"],
               "about": "camera from the mocap object and FoundationPose (e2s/mocap/assist)"},
 }
@@ -39,6 +42,7 @@ PRESETS = {
     "video_pg": ("video_pg", "fp_box"),
     "video_pi3": ("video_pi3", "fp_box"),
     "video_pi3c24": ("video_pi3c24", "fp_box"),
+    "video_pi3_joint": ("video_pi3_joint", "fp_box"),
     "mocap_assisted": ("mocap", "fp_mocap"),
     "diag_fp_mocap_camera": ("mocap", "fp_box"),
 }
