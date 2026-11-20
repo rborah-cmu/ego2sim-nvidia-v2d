@@ -310,6 +310,12 @@ object-trajectory error.*
   - *Chunk scale still varies 0.6-1.2 within a clip. Longer chunks (24) did not change the result.*
   - *Feeding the uncalibrated intrinsics (f = 713) made it worse. Calibrate the camera (P1.3) before trusting
     anything that uses f.*
+- *Joint camera + object refinement on Pi3X (`camera_pose_graph.py --no-table --scale-every 10`, stage
+  `video_pi3_joint`) adds resting-object constraints (no hand contact) and one odometry scale per 10 frames.
+  Result: 5.62 cm / 5.26 deg / ADD-S AUC 0.648, the current best video-only pipeline. End-still error drops to
+  1.4 / 4.9 / 7.7 cm per clip.*
+  - *Variants are within noise of each other. Do not tune further on these 3 clips. The next gains need more clips
+    (P1.5), calibrated intrinsics (P1.3), and a look at the FoundationPose rotation outliers (clip 001 rot p95 68 deg).*
 
 Needed to put hands and objects in one world, and it must come from video.
 
