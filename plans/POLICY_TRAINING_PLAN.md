@@ -86,8 +86,15 @@ Two more results matter for us:
 ### W0 - Baseline and logging (no new learning code)
 - Re-measure S0 on the 3 dev episodes: score against environment steps and against wall-clock (the curves come from
   training checkpoints).
-- Add transition logging to a training run: state, action, next state, reward, termination, sim context (friction,
-  mass, randomization parameters), and the episode's object id. Logging must not slow training by more than 10%.
+- Transition data. Past runs did not keep transitions: `state_*.safetensors` holds networks and optimizer state, no
+  replay buffer (checked 2026-11-19). They did keep policy checkpoints at several points in training
+  (`~/v2d/runs/*/policy_<step>.safetensors`, 38 runs, and the S0 checkpoints of all 20 evaluation episodes).
+  - Generate the data by rolling those checkpoints out in FlashCHORD. Use early, middle and final checkpoints, add
+    action noise, and use the S0 perturbed / pickup resets, so the data covers more than the reference neighbourhood.
+  - Log state, action, next state, reward, termination, sim context (friction, mass, randomization parameters) and
+    the episode's object id. Store fp16 on /usr1, and estimate the size per transition first.
+  - Human video and mocap cannot train this model: they contain no robot actions. They stay what they are: references
+    and object geometry.
 - **Gate:** baseline curves and about 50-100M logged transitions per dev episode on disk. Check the disk budget
   first.
 
