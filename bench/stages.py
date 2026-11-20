@@ -33,6 +33,8 @@ OBJECT = {
     "fp_box": {"dir": "fp_box", "mocap_used_for": [], "about": "FoundationPose on MoGe depth, video only"},
     "fp_sym": {"dir": "fp_sym", "mocap_used_for": [],
                "about": "fp_box after tools/sym_track.py (look-alike twins chosen over the clip, frame 0 from the still start)"},
+    "fp_rep": {"dir": "fp_rep", "mocap_used_for": [],
+               "about": "fp_box with jump failures repaired (tools/fp_repair.py, on the Pi3X joint camera)"},
     "fp_mocap": {"dir": "fp_mocap", "mocap_used_for": ["object_trajectory", "camera_path", "sync", "mesh_placement"],
                  "about": "the mocap trajectory expressed in the camera (mocap-assisted reference)"},
 }
@@ -43,6 +45,7 @@ PRESETS = {
     "video_pi3": ("video_pi3", "fp_box"),
     "video_pi3c24": ("video_pi3c24", "fp_box"),
     "video_pi3_joint": ("video_pi3_joint", "fp_box"),
+    "video_pi3_joint_rep": ("video_pi3_joint", "fp_rep"),
     "mocap_assisted": ("mocap", "fp_mocap"),
     "diag_fp_mocap_camera": ("mocap", "fp_box"),
 }
