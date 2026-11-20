@@ -18,7 +18,7 @@ which the object rests. Residuals, each divided by its sigma, robust loss:
 Writes camera_to_world (same world as --vo) and OUT.json (planes, stretches, residual summaries).
 
 Recommended (2026-11-19, 3 val clips): on the Pi3X camera (tools/pi3_camera.py) with --no-table --scale-every 10:
-8.15 -> 5.62 cm, ADD-S AUC 0.549 -> 0.648. On rgbd_vo it did not help, and MoGe table planes hurt rotation in both.
+8.15 -> 5.62 cm, ADD-S AUC 0.549 -> 0.648. On rgbd_vo it did not help, and MoGe table planes hurt rotation in both."""
 import argparse
 import json
 import sys
