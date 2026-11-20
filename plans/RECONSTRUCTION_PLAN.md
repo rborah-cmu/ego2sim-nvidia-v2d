@@ -273,6 +273,13 @@ that mesh (a mesh is only as good as the tracking it supports). Target for P2: t
     clips, and the benchmark already aligns on the still start.
   - Still to do: top-k FoundationPose hypotheses, which need a wrapper around the pinned module and a GPU run.
     Table and hand terms in the Viterbi.*
+  *Status 2026-11-19 (tracker failures): `tools/fp_repair.py`, stage `fp_rep`.*
+  - *It splits the object track at implausible jumps and solves a rotation offset per segment, from continuity and
+    outline fit.*
+  - *It partly fixes the one FoundationPose failure in the val clips (clip 001: lost during a turn, wrong for 40
+    frames). Rotation p95 goes from 31 to 25 deg; medians unchanged.*
+  - *A full fix needs a per-frame failure signal. Outline fit should give one once the intrinsics are calibrated
+    (P1.3). FoundationPose re-registration triggered by that signal belongs in P3.2.*
 - **P3.2 Render-and-compare refinement** after tracking: per frame, optimise the pose against depth, silhouette and
   edges (and texture when the mesh has it), with a temporal smoothness term, over a sliding window. Initialise from
   P3.1. This is where sub-centimetre accuracy has to come from.
