@@ -17,8 +17,8 @@
    "height": 1080,
    "source": "iPhone 14 Pro ultra-wide, 14 mm equivalent tag; not calibrated"
   },
-  "depth_source": "monocular_moge",
-  "depth": "ep/BlueBox_Take1_000/moge_depth",
+  "depth_source": "monocular_depthpro2",
+  "depth": "ep/BlueBox_Take1_000/dp2_depth_est",
   "object_masks": {
    "BlueBox": "clips/BlueBox_Take1_000/box_masks"
   },
@@ -36,6 +36,16 @@
     },
     "note": "the bare cuboid mesh given to FoundationPose; its symmetry is what the reconstruction may assume"
    }
+  },
+  "depth_previous": {
+   "depth": "ep/BlueBox_Take1_000/moge_depth",
+   "depth_source": "monocular_moge",
+   "until": "2026-11-22"
+  },
+  "video_undist": "ep/BlueBox_Take1_000/stereo/cam_a_undist.mp4",
+  "focal_estimate": {
+   "fx": 825.0,
+   "source": "Depth Pro 2 field-of-view estimate (median of the 3 clips: 818 / 873 / 825); intrinsics.fx = 713 is the older uncalibrated guess; calibrate (plan P1.3)"
   }
  },
  "ground_truth": {

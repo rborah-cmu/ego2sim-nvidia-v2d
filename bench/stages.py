@@ -59,6 +59,7 @@ PRESETS = {
     "video_pi3c24": ("video_pi3c24", "fp_box"),
     "video_pi3_joint": ("video_pi3_joint", "fp_box"),
     "video_pi3_joint_rep": ("video_pi3_joint", "fp_rep"),
+    "video_default": ("video_pi3dp2_joint", "fp_dp2_rep"),   # scripts/mono_clip_recon.sh (2026-11-22)
     "dp2_pi3": ("video_pi3dp2", "fp_dp2"),
     "dp2_joint": ("video_pi3dp2_joint", "fp_dp2"),
     "dp2_joint_rep": ("video_pi3dp2_joint", "fp_dp2_rep"),
