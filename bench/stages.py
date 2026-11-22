@@ -39,9 +39,9 @@ OBJECT = {
                "about": "fp_box after tools/sym_track.py (look-alike twins chosen over the clip, frame 0 from the still start)"},
     "fp_rep": {"dir": "fp_rep", "mocap_used_for": [],
                "about": "fp_box with jump failures repaired (tools/fp_repair.py, on the Pi3X joint camera)"},
-    "fp_dp2": {"dir": "fp_dp2", "mocap_used_for": [],
+    "fp_dp2": {"dir": "fp_dp2", "mocap_used_for": [], "depth_source": "monocular_depthpro2",
                "about": "FoundationPose on Depth Pro 2 depth, f = 825 px (DP2's own estimate)"},
-    "fp_dp2_rep": {"dir": "fp_dp2_rep", "mocap_used_for": [], "about": "fp_dp2 after tools/fp_repair.py"},
+    "fp_dp2_rep": {"dir": "fp_dp2_rep", "mocap_used_for": [], "depth_source": "monocular_depthpro2", "about": "fp_dp2 after tools/fp_repair.py"},
     "fp_mocap": {"dir": "fp_mocap", "mocap_used_for": ["object_trajectory", "camera_path", "sync", "mesh_placement"],
                  "about": "the mocap trajectory expressed in the camera (mocap-assisted reference)"},
 }
@@ -87,6 +87,6 @@ def load(manifest, root, cam, obj, n_frames):
         objects[name] = c2w[:n_frames] @ T_cm
     uses = set(CAMERA[cam]["mocap_used_for"]) | set(OBJECT[obj]["mocap_used_for"])
     src = "video" if not uses else ("mocap" if "object_trajectory" in uses else "mixed")
-    rec = provenance.make(src, sorted(uses), depth_source=manifest["inputs"].get("depth_source", "unknown"),
+    rec = provenance.make(src, sorted(uses), depth_source=OBJECT[obj].get("depth_source", manifest["inputs"].get("depth_source", "unknown")),
                           camera_stage=cam, object_stage=obj)
     return {"objects": objects, "provenance": rec}

@@ -202,6 +202,19 @@ camera scale) reads depth through one interface, which picks the best source the
 - Report every benchmark row with its depth source. A gain that only exists with sensor depth is still a gain,
   but the monocular row shows what the pipeline can do on arbitrary video.
 
+*Status 2026-11-22: Depth Pro 2 (Apple, arXiv 2611.26603, model L, video mode; weights research-use only) replaces
+MoGe-2 in the video-only chain: `tools/dp2_depth.py`, focal length f = 825 px from its own estimate.*
+- *Depth quality against MoGe-2:*
+  - *table plane RMS 1.1 vs 4.2 mm*
+  - *frame-to-frame scale flicker 3.6 vs 5.1%*
+  - *metric bias on the box 3.1 vs 4.0%*
+- *Chain result (rerun FoundationPose, Pi3X scaled to it, joint pose graph; presets `dp2_pi3`, `dp2_joint`):
+  4.58 cm / 2.48 deg / rot p95 8.9 deg / ADD-S AUC 0.706, against 5.62 / 5.29 / 24.7 / 0.647 before. FoundationPose
+  no longer loses the box in clip 001.*
+- *Not separated yet: how much comes from the depth model and how much from f = 825 instead of 713. MoGe rerun at
+  f = 825 is the control.*
+- *The focal estimates (818 / 873 / 825 px) say f = 713 was too short. Calibrate the camera (P1.3) to settle it.*
+
 ### 5.2 Object mesh (P2)
 
 Largest single loss today, and the diagnosis in 2.1 says why: the task clip does not show enough of the object.
