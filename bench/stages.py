@@ -29,6 +29,10 @@ CAMERA = {
                      "about": "Pi3X camera scaled to Depth Pro 2 depth"},
     "video_pi3dp2_joint": {"file": "camera_vo_pi3dp2_joint.npz", "mocap_used_for": [],
                            "about": "Pi3X (DP2 scale) + joint pose graph with fp_dp2 (--no-table --scale-every 10)"},
+    "video_pi3moge825": {"file": "camera_vo_pi3moge825.npz", "mocap_used_for": [],
+                         "about": "Pi3X camera scaled to MoGe-2 depth computed with f = 825 (control for Depth Pro 2)"},
+    "video_pi3moge825_joint": {"file": "camera_vo_pi3moge825_joint.npz", "mocap_used_for": [],
+                               "about": "Pi3X (MoGe f=825 scale) + joint pose graph with fp_moge825"},
     "mocap": {"file": "camera_vo.npz", "mocap_used_for": ["camera_path", "sync", "mesh_placement"],
               "about": "camera from the mocap object and FoundationPose (e2s/mocap/assist)"},
 }
@@ -42,6 +46,8 @@ OBJECT = {
     "fp_dp2": {"dir": "fp_dp2", "mocap_used_for": [], "depth_source": "monocular_depthpro2",
                "about": "FoundationPose on Depth Pro 2 depth, f = 825 px (DP2's own estimate)"},
     "fp_dp2_rep": {"dir": "fp_dp2_rep", "mocap_used_for": [], "depth_source": "monocular_depthpro2", "about": "fp_dp2 after tools/fp_repair.py"},
+    "fp_moge825": {"dir": "fp_moge825", "mocap_used_for": [], "depth_source": "monocular_moge_f825",
+                   "about": "FoundationPose on MoGe-2 depth given f = 825 px (control for Depth Pro 2)"},
     "fp_mocap": {"dir": "fp_mocap", "mocap_used_for": ["object_trajectory", "camera_path", "sync", "mesh_placement"],
                  "about": "the mocap trajectory expressed in the camera (mocap-assisted reference)"},
 }
@@ -56,6 +62,8 @@ PRESETS = {
     "dp2_pi3": ("video_pi3dp2", "fp_dp2"),
     "dp2_joint": ("video_pi3dp2_joint", "fp_dp2"),
     "dp2_joint_rep": ("video_pi3dp2_joint", "fp_dp2_rep"),
+    "moge825_pi3": ("video_pi3moge825", "fp_moge825"),
+    "moge825_joint": ("video_pi3moge825_joint", "fp_moge825"),
     "mocap_assisted": ("mocap", "fp_mocap"),
     "diag_fp_mocap_camera": ("mocap", "fp_box"),
 }
