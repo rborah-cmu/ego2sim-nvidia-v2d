@@ -211,8 +211,9 @@ MoGe-2 in the video-only chain: `tools/dp2_depth.py`, focal length f = 825 px fr
 - *Chain result (rerun FoundationPose, Pi3X scaled to it, joint pose graph; presets `dp2_pi3`, `dp2_joint`):
   4.58 cm / 2.48 deg / rot p95 8.9 deg / ADD-S AUC 0.706, against 5.62 / 5.29 / 24.7 / 0.647 before. FoundationPose
   no longer loses the box in clip 001.*
-- *Not separated yet: how much comes from the depth model and how much from f = 825 instead of 713. MoGe rerun at
-  f = 825 is the control.*
+- *Control (MoGe-2 given f = 825, same chain, preset `moge825_joint`): 5.30 cm / 6.57 deg / rot p95 91.6 deg /
+  ADD-S AUC 0.606. That is no better than MoGe at f = 713, so the gain comes from the Depth Pro 2 depth, not the
+  focal length. Make Depth Pro 2 the default depth for monocular clips.*
 - *The focal estimates (818 / 873 / 825 px) say f = 713 was too short. Calibrate the camera (P1.3) to settle it.*
 
 ### 5.2 Object mesh (P2)
